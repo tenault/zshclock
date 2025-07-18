@@ -1,4 +1,8 @@
 # Peaclock
+
+> [!WARNING]
+> `peaclock.zsh` is a recent fork and is not yet complete or usable! Please wait patiently for the first release!
+
 A responsive and customizable clock, timer, and stopwatch for the terminal.
 
 [![peaclock](https://raw.githubusercontent.com/octobanana/peaclock/master/res/peaclock.png)](https://octobanana.com/software/peaclock/blob/res/peaclock.mp4#file)
