@@ -3,6 +3,8 @@
 # todo
 # save live settings to config file
 # auto-size down to single date line
+# add alarm mode
+# tab cycles modes?
 
 # constants
 PC_CURSOR_HIDE="\x1b[?25l"
@@ -136,36 +138,108 @@ t_date=true
 ### clock core
 
 function build_clock {
-    clock[vh]=$LINES
-    clock[vw]=$COLUMNS
+    clock[vh]=$(( LINES - 1 ))
+    clock[vw]=$(( COLUMNS - 1 ))
 
     components=()
 
     if [[ $t_date || $g_view == "date" ]]; then build_date; fi
-
-    zcurses refresh
+    build_cmdr
 }
 
 function unbuild_clock {
-    for name in $components; do
-        zcurses delwin $name
-    done
+    for name in $components; do zcurses delwin $name; done
 
     zcurses clear stdscr redraw
+    zcurses refresh
 }
 
 function refresh_clock {
     for name in $components; do
         case $name in
             (date) refresh_date ;;
-            (*)    return 1     ;;
+            (*)    ;;
         esac
     done
-
-    zcurses refresh
 }
 
-### clock parts
+function resize_clock {
+    LINES=
+    COLUMNS=
+
+    if (( (LINES - 1) != clock[vh] || (COLUMNS - 1) != clock[vw] )); then
+        unbuild_clock
+        build_clock
+    fi
+}
+
+function run_clock {
+    local epoch=$EPOCHREALTIME
+    local epsilon=0
+
+    while true; do
+        get_input
+        resize_clock
+
+        local duration=${$(( (EPOCHREALTIME - epoch) * 1000 ))%%.*}
+
+        if (( duration >= (g_rate_refresh - epsilon) )); then
+            refresh_clock
+            epoch=$EPOCHREALTIME
+            epsilon=$(( (duration - (g_rate_refresh - epsilon)) % g_rate_refresh ));
+        fi
+    done
+}
+
+### clock interaction
+
+function enter_cmd_mode {
+    clock[mode:cmd]=1
+
+    print -n $PC_CURSOR_SHOW
+
+    refresh_cmdr
+}
+
+function exit_cmd_mode {
+    clock[mode:cmd]=0
+    clock[cmd]=""
+
+    print -n $PC_CURSOR_HIDE
+
+    zcurses clear cmdr
+    zcurses refresh cmdr
+}
+
+function get_input {
+    local keypress
+    local special
+
+    zcurses input cmdr keypress special
+
+    if [[ -n $special ]]; then
+        case $special in
+            (BACKSPACE) if (( $clock[mode:cmd] )); then clock[cmd]=${clock[cmd]%?}; refresh_cmdr; fi ;;
+            (*)         ;;
+        esac
+    elif (( ! $clock[mode:cmd] )); then
+        case $keypress in
+            (q|Q) break ;;
+            (:)   enter_cmd_mode ;;
+            (*)   ;;
+        esac
+    else
+        case $keypress in
+            ('')          ;;
+            ($'\e')       exit_cmd_mode ;;
+            ($'\n'|$'\r') exit_cmd_mode ;; # process $clock[cmd]
+            ($'\t')       clock[cmd]+="    "; refresh_cmdr    ;;
+            (*)           clock[cmd]+=$keypress; refresh_cmdr ;;
+        esac
+    fi
+}
+
+### clock components
 
 function build_date {
     local date
@@ -179,10 +253,8 @@ function build_date {
     clock[date:x]=$(( (clock[vw] - clock[date:w]) / 2 ))
 
     zcurses addwin date $clock[date:h] $clock[date:w] $clock[date:y] $clock[date:x]
-    zcurses timeout date $g_rate_input
 
-    zcurses string date $date
-    zcurses touch date
+    refresh_date
 }
 
 function refresh_date {
@@ -192,51 +264,42 @@ function refresh_date {
     zcurses clear date
     zcurses move date 0 0
     zcurses string date $date
-    zcurses touch date
+    zcurses refresh date
 }
 
-function resize_clock {
-    LINES=
-    COLUMNS=
+function build_cmdr {
+    components+=(cmdr)
 
-    if (( $LINES != clock[vh] || $COLUMNS != clock[vw] )); then
-        unbuild_clock
-        build_clock
-        return 0
-    fi
+    clock[cmdr:h]=1
+    clock[cmdr:w]=$clock[vw]
+    clock[cmdr:y]=$clock[vh]
+    clock[cmdr:x]=0
 
-    return 1
+    zcurses addwin cmdr $clock[cmdr:h] $clock[cmdr:w] $clock[cmdr:y] $clock[cmdr:x]
+    zcurses timeout cmdr $g_rate_input
+
+    if (( clock[mode:cmd] )); then refresh_cmdr; fi
 }
 
-function run_clock {
-    local epoch=$EPOCHREALTIME
-    local epsilon=0
-
-    while true; do
-        zcurses input date keypress
-
-        case $keypress in
-            (q|Q) break ;;
-            (*)   ;;
-        esac
-
-        resize_clock
-
-        local duration=${$(( (EPOCHREALTIME - epoch) * 1000 ))%%.*}
-
-        if (( duration >= (g_rate_refresh - epsilon) )); then
-            refresh_clock
-            epoch=$EPOCHREALTIME
-            epsilon=$(( (duration - (g_rate_refresh - epsilon)) % g_rate_refresh ));
-        fi
-    done
+function refresh_cmdr {
+    zcurses clear cmdr
+    zcurses move cmdr 0 0
+    zcurses string cmdr ":$clock[cmd]"
+    zcurses refresh cmdr
 }
+
+### director
 
 function clock_the_thing {
+    trap 'break' INT
+
     zmodload zsh/curses
     zmodload zsh/datetime
 
     typeset -A clock=()
+
+    clock[mode:cmd]=0
+    clock[cmd]=""
 
     print -n $PC_CURSOR_HIDE
     zcurses init
