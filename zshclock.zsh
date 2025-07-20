@@ -282,9 +282,13 @@ function build_cmdr {
 }
 
 function refresh_cmdr {
+    local cmd=":$clock[cmd]"
+
+    if (( ${#clock[cmd]} >= clock[cmdr:w] )); then cmd=":...${clock[cmd]:$(( -clock[cmdr:w] + 4 ))}"; fi
+
     zcurses clear cmdr
     zcurses move cmdr 0 0
-    zcurses string cmdr ":$clock[cmd]"
+    zcurses string cmdr $cmd
     zcurses refresh cmdr
 }
 
