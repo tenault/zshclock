@@ -18,8 +18,8 @@ body:
       label: "How would zshclock and/or its users benefit from this suggestion?"
       placeholder: |
         Bees are, like, really good for the environment? If zshclock had bees, it would definitely be more awesome. Plus, the clock could finally pollinate itself.
-    validations:
-      required: true
+      validations:
+        required: true
   - type: textarea
     id: additionals
     attributes:
@@ -30,7 +30,7 @@ body:
         I'm not particular what kind of bee zshclock adds. Any kind would do, so long as there's lots of them. Please. And thank you.
   - type: checkboxes
     attributes:
-      label: "Almost done! Check the box and hit the button to submit your request!"
+      label: "Almost done! Check the box and hit the button to officially submit your request!"
       options:
-        - label: "I understand this form is a request, and that there's no guarantee this feature will be added."
+        - label: "I understand this form is only a request, and that there's no guarantee this feature will ever be added."
           required: true
