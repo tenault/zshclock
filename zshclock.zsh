@@ -1,322 +1,270 @@
-#!/bin/zsh
+#!/usr/bin/env zsh
 
-# todo
-# save live settings to config file
-# auto-size down to single date line
-# add alarm mode
-# tab cycles modes?
+#                    dP                dP                   dP
+#                    88                88                   88
+#  d888888b .d8888b. 88d888b. .d8888b. 88 .d8888b. .d8888b. 88  .dP
+#     .d8P' Y8ooooo. 88'  `88 88'  `"" 88 88'  `88 88'  `"" 88888"
+#   .Y8P          88 88    88 88.  ... 88 88.  .88 88.  ... 88  `8b.
+#  d888888P `88888P' dP    dP `88888P' dP `88888P' `88888P' dP   `YP
+# ooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
+#
+# copyright (c) 2025 Malakai Smith (@tenault)
+# originally forked from @octobanana/peaclock
+#
+# ooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, you can obtain one at https://mozilla.org/MPL/2.0
 
-# constants
-PC_CURSOR_HIDE="\x1b[?25l"
-PC_CURSOR_SHOW="\x1b[?25h"
 
-###### config
+###### constants
 
-### general
+ZC_ESC="\x1b"
+ZC_CSI=${ZC_ESC}[
 
-# individual clock block size, overridden if auto_size is true
-#g_block_x=2
-#g_block_y=1
+ZC_CLEAR=${ZC_CSI}2J
+ZC_CLEAR_LINE=${ZC_CSI}2K
 
-# spacing between clock blocks
-#g_padding_x=0
-#g_padding_y=0
+ZC_INIT=${ZC_CSI}?1049h
+ZC_EXIT=${ZC_CSI}?1049l
 
-# margin around terminal edges
-#g_margin_x=0
-#g_margin_y=0
+ZC_CURSOR_HOME=${ZC_CSI}H
+ZC_CURSOR_SHOW=${ZC_CSI}?25h
+ZC_CURSOR_HIDE=${ZC_CSI}?25l
 
-# ratio between x and y to preserve when auto_size is true
-#g_ratio_x=2
-#g_ratio_y=1
 
-# spacing between clock and dateline
-#g_date_padding=1
+###### ztc
 
-# string used to fill clock blocks
-#g_fill_active=""
-#g_fill_inactive=""
-#g_fill_colon=""
+function zc_build {
+    zc[vh]=$LINES
+    zc[vw]=$COLUMNS
 
-# locale, e.g. `en_US.utf8`
-#g_locale=""
+    local _components
+    zc_unpack components _components
 
-# timezone, e.g. `America/Denver`
-#g_timezone=""
+    for name in $_components; do "zc_add_$name"; done
 
-# formatting for date line, follows strftime expansions
-g_date="%a %b %d - %r"
-
-# can be `clock`, `timer`, or `stopwatch`
-#g_mode="clock"
-
-# can be `date`, `ascii`, `digital`, `binary`, or `icon`
-g_view="date"
-
-# set the value to adjust with the `hjkl;'` keys
-# can be `block`, `padding`, `margin`, `ratio`, `active-fg`, `inactive-fg`, `colon-fg`,
-# `active-bg`, `inactive-bg`, `colon-bg`, `background`, or `date`
-#g_toggle="active-bg"
-
-# stopwatch, can be `clear`, `stop`, `start`, or `##h:##m:##s`
-#g_stopwatch="start"
-
-# timer, can be `clear`, `stop`, `start`, or `##h:##m:##s`
-#g_timer="10m:0s"
-
-# command to execute when timer goes off
-#g_timer_exec=""
-
-# user input delay in milliseconds
-g_rate_input=50
-
-# refresh/redraw delay in milliseconds
-g_rate_refresh=1000
-
-# status delay in milliseconds
-#g_rate_status=5000
-
-### toggles (`set <value> <on|off>`)
-
-# use 24-hour time
-#t_hour_24=true
-
-# display seconds
-#t_seconds=false
-
-# display date line
-t_date=true
-
-# maximize clock size, overrides `g_block`
-#t_auto_size=true
-
-# maximize clock size, preserving `ratio`, overrides `g_block` and `t_auto_size`
-#t_auto_ratio=true
-
-### styles (`style <value> <#000-#fff|#000000-#ffffff|0-255|color-name|reverse|clear>`)
-### valid color names: <color> [bright], `black`, `red`, `green`, `yellow`, `blue`, `magenta`,
-### `cyan`, `white`
-
-# text color for active clock blocks, text set with `g_fill_active`
-#s_active_fg="clear"
-
-# text color for inactive clock blocks, text set with `g_fill_inactive`
-#s_inactive_fg="clear"
-
-# text color for colon clock blocks, text set with `g_fill_colon`
-#s_colon_fg="clear"
-
-# background color for active clock blocks
-#s_active_bg="reverse"
-
-# background color for inactive clock blocks
-#s_inactive_bg="clear"
-
-# background color for colon clock blocks
-#s_colon_bg="clear"
-
-# text color for the date line
-#s_date="clear"
-
-# background color
-#s_background="clear"
-
-# status text color
-#s_text="clear"
-
-# status prompt color
-#s_prompt="clear"
-
-# status success color
-#s_success="green"
-
-# status error color
-#s_error="red"
-
-###### functions
-
-### clock core
-
-function build_clock {
-    clock[vh]=$(( LINES - 1 ))
-    clock[vw]=$(( COLUMNS - 1 ))
-
-    components=()
-
-    if [[ $t_date || $g_view == "date" ]]; then build_date; fi
-    build_cmdr
+    zc_paint
 }
 
-function unbuild_clock {
-    for name in $components; do zcurses delwin $name; done
-
-    zcurses clear stdscr redraw
-    zcurses refresh
-}
-
-function refresh_clock {
-    for name in $components; do
-        case $name in
-            (date) refresh_date ;;
-            (*)    ;;
-        esac
-    done
-}
-
-function resize_clock {
-    LINES=
-    COLUMNS=
-
-    if (( (LINES - 1) != clock[vh] || (COLUMNS - 1) != clock[vw] )); then
-        unbuild_clock
-        build_clock
-    fi
-}
-
-function run_clock {
-    local epoch=$EPOCHREALTIME
-    local epsilon=0
+function zc_drive {
+    float _epoch=$EPOCHREALTIME
+    integer _epsilon=0
 
     while true; do
-        get_input
-        resize_clock
+        # handle inputs
+        zc_input
 
-        local duration=${$(( (EPOCHREALTIME - epoch) * 1000 ))%%.*}
+        # check for resizes
+        zc_align
 
-        if (( duration >= (g_rate_refresh - epsilon) )); then
-            refresh_clock
-            epoch=$EPOCHREALTIME
-            epsilon=$(( (duration - (g_rate_refresh - epsilon)) % g_rate_refresh ));
+        # repaint clock
+        integer _duration=${$(( (EPOCHREALTIME - _epoch) * 1000 ))%%.*}
+
+        if (( _duration >= ( zc[:rate:refresh] - _epsilon ) )); then
+            zc_cycle
+
+            _epoch=$EPOCHREALTIME
+            _epsilon=$(( (_duration - (zc[:rate:refresh] - _epsilon)) % zc[:rate:refresh] ))
         fi
     done
 }
 
-### clock interaction
-
-function enter_cmd_mode {
-    clock[mode:cmd]=1
-
-    print -n $PC_CURSOR_SHOW
-
-    refresh_cmdr
+function zc_clean {
+    integer _code=${1:-0}
+    zc_write $ZC_CURSOR_SHOW $ZC_EXIT
+    exit $_code
 }
 
-function exit_cmd_mode {
-    clock[mode:cmd]=0
-    clock[cmd]=""
 
-    print -n $PC_CURSOR_HIDE
+###### plonk
 
-    zcurses clear cmdr
-    zcurses refresh cmdr
+function zc_plonk {
+    zc[:date]="%a %b %d - %r"
+    zc[:rate:input]=50
+    zc[:rate:refresh]=1000
+
+    local _components=(date commander)
+    zc_pack components _components
 }
 
-function get_input {
-    local keypress
-    local special
 
-    zcurses input cmdr keypress special
+###### facades
 
-    if [[ -n $special ]]; then
-        case $special in
-            (BACKSPACE) if (( $clock[mode:cmd] )); then clock[cmd]=${clock[cmd]%?}; refresh_cmdr; fi ;;
-            (*)         ;;
-        esac
-    elif (( ! $clock[mode:cmd] )); then
-        case $keypress in
-            (q|Q) break ;;
-            (:)   enter_cmd_mode ;;
-            (*)   ;;
-        esac
+function zc_align {
+    LINES=
+    COLUMNS=
+
+    if (( LINES != zc[vh] || COLUMNS != zc[vw] )); then zc_build; fi
+}
+
+function zc_cycle {
+    local _components=$@
+    if (( $# == 0 )); then zc_unpack components _components; fi
+
+    for name in $_components; do "zc_set_$name"; done
+
+    zc_paint $1
+}
+
+
+###### engines
+
+function zc_paint {
+    integer _y
+    integer _x
+    integer _h
+    integer _w
+
+    local _data
+
+    local _staged=()
+    local _clear=$ZC_CLEAR
+    local _origin
+
+    local _components=$@
+
+    if (( $# == 0 )); then
+        zc_unpack components _components
     else
-        case $keypress in
-            ('')          ;;
-            ($'\e')       exit_cmd_mode ;;
-            ($'\n'|$'\r') exit_cmd_mode ;; # process $clock[cmd]
-            ($'\t')       clock[cmd]+="    "; refresh_cmdr    ;;
-            (*)           clock[cmd]+=$keypress; refresh_cmdr ;;
+        _clear=$ZC_CLEAR_LINE
+    fi
+
+    for name in $_components; do
+        _h=$zc[$name:h]
+
+        case $zc[$name:w] in
+            (:auto) _w=${#zc[$name:data]} ;;
+            (*)     _w=$zc[$name:w]       ;;
+        esac
+
+        case $zc[$name:y] in
+            (:auto) _y=$(( ( (zc[vh] - _h) / 2 ) + zc[vh] % 2 )) ;;
+            (*)     _y=$zc[$name:y] ;;
+        esac
+
+        case $zc[$name:x] in
+            (:auto) _x=$(( ( (zc[vw] - _w) / 2 ) + zc[vw] % 2 )) ;;
+            (*)     _x=$zc[$name:x] ;;
+        esac
+
+        _origin="${ZC_CSI}${_y};${_x}H"
+        _data=$zc[$name:data]
+
+        _staged+=($_origin $_data)
+    done
+
+
+    zc_write $_clear ${(j::)_staged}
+}
+
+function zc_input {
+    local _key
+    read -s -t $(( zc[:rate:input] / 1000.0 )) -k 1 _key
+
+    if (( zc[commander] )); then
+        case $_key in
+            ($'\e')
+                zc[:command]=""
+                zc[commander]=0
+                ;;
+            ($'\b'|$'\x7f')
+                zc[:command]=${zc[:command]%?}
+                ;;
+            ($'\n'|$'\r')
+                # parse command
+                zc[:command]=""
+                zc[commander]=0
+                ;;
+            (*)
+                zc[:command]+=$_key
+                ;;
+        esac
+
+        zc_cycle commander
+    else
+        case $_key in
+            (q|Q) break ;;
+            (:)   zc[commander]=1; zc_cycle commander ;;
+            (*)   ;;
         esac
     fi
 }
 
-### clock components
+function zc_parse {
 
-function build_date {
-    local date
-    strftime -s date $g_date
-
-    components+=(date)
-
-    clock[date:h]=1
-    clock[date:w]=${#date}
-    clock[date:y]=$(( (clock[vh] - clock[date:h]) / 2 ))
-    clock[date:x]=$(( (clock[vw] - clock[date:w]) / 2 ))
-
-    zcurses addwin date $clock[date:h] $clock[date:w] $clock[date:y] $clock[date:x]
-
-    refresh_date
 }
 
-function refresh_date {
-    local date
-    strftime -s date $g_date
 
-    zcurses clear date
-    zcurses move date 0 0
-    zcurses string date $date
-    zcurses refresh date
+###### components
+
+function zc_add_date {
+    zc[date:y]=:auto
+    zc[date:x]=:auto
+    zc[date:h]=1
+    zc[date:w]=:auto
+
+    zc_set_date
 }
 
-function build_cmdr {
-    components+=(cmdr)
+function zc_set_date {
+    local _date
+    strftime -s _date $zc[:date]
 
-    clock[cmdr:h]=1
-    clock[cmdr:w]=$clock[vw]
-    clock[cmdr:y]=$clock[vh]
-    clock[cmdr:x]=0
-
-    zcurses addwin cmdr $clock[cmdr:h] $clock[cmdr:w] $clock[cmdr:y] $clock[cmdr:x]
-    zcurses timeout cmdr $g_rate_input
-
-    if (( clock[mode:cmd] )); then refresh_cmdr; fi
+    zc[date:data]=$_date
 }
 
-function refresh_cmdr {
-    local cmd=":$clock[cmd]"
+function zc_add_commander {
+    zc[:command]=${zc[:command]:-}
 
-    if (( ${#clock[cmd]} >= clock[cmdr:w] )); then cmd=":...${clock[cmd]:$(( -clock[cmdr:w] + 4 ))}"; fi
+    zc[commander:y]=$zc[vh]
+    zc[commander:x]=0
+    zc[commander:h]=1
+    zc[commander:w]=$zc[vw]
 
-    zcurses clear cmdr
-    zcurses move cmdr 0 0
-    zcurses string cmdr $cmd
-    zcurses refresh cmdr
+    zc[commander]=${zc[commander]:-0}
+
+    zc_set_commander
 }
 
-### director
+function zc_set_commander {
+    local _command=$zc[:command]
 
-function clock_the_thing {
-    trap 'break' INT
+    # truncate overflows
+    if (( ${#_command} >= zc[commander:w] )); then _command=...${_command:$(( -zc[commander:w] + 4 ))}; fi
 
-    zmodload zsh/curses
+    if (( zc[commander] )); then zc[commander:data]=:${_command//\\/\\\\}$ZC_CURSOR_SHOW; else zc[commander:data]=$ZC_CURSOR_HIDE; fi
+}
+
+###### helpers
+
+function zc_write { print -n ${(j::)@} }
+
+function zc_pack   { zc[$1]=${(Pj.:.)2} }
+function zc_unpack { : ${(AP)2::=${(s.:.)zc[$1]}} }
+
+
+###### director
+
+function zsh_that_clock {
+    trap 'zc_clean 1' INT
+
     zmodload zsh/datetime
 
-    typeset -A clock=()
+    typeset -A zc=()
 
-    clock[mode:cmd]=0
-    clock[cmd]=""
+    # config
+    zc_plonk
 
-    print -n $PC_CURSOR_HIDE
-    zcurses init
+    # init
+    zc_write $ZC_INIT
 
-    build_clock
-    run_clock
-    unbuild_clock
+    # ztc
+    zc_build && zc_drive
 
-    zcurses end
-    print -n $PC_CURSOR_SHOW
-
-    zmodload -u zsh/curses
-    zmodload -u zsh/datetime
+    # clean
+    zc_clean
 }
 
-clock_the_thing
+zsh_that_clock
