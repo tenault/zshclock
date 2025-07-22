@@ -267,7 +267,7 @@ If You choose to distribute Source Code Form that is Incompatible With Secondary
 ```
 This Source Code Form is subject to the terms of the Mozilla Public
 License, v. 2.0. If a copy of the MPL was not distributed with this
-file, You can obtain one at https://mozilla.org/MPL/2.0/.
+file, You can obtain one at https://mozilla.org/MPL/2.0
 ```
 
 > [!TIP]
@@ -279,5 +279,5 @@ You may add additional accurate notices of copyright ownership.
 
 ```
 This Source Code Form is "Incompatible With Secondary Licenses", as
-defined by the Mozilla Public License, v. 2.0.
+defined by the Mozilla Public License, v. 2.0
 ```
