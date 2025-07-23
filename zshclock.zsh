@@ -43,7 +43,7 @@ function zc_build {
     local _components
     zc_unpack components _components
 
-    for name in $_components; do "zc_add_$name"; done
+    for _name in $_components; do "zc_add_$_name"; done
 
     zc_paint
 }
@@ -85,7 +85,7 @@ function zc_plonk {
     zc[:rate:input]=50
     zc[:rate:refresh]=1000
 
-    local _components=(date commander)
+    local _components=(face:default date commander)
     zc_pack components _components
 }
 
@@ -103,7 +103,7 @@ function zc_cycle {
     local _components=$@
     if (( $# == 0 )); then zc_unpack components _components; fi
 
-    for name in $_components; do "zc_set_$name"; done
+    for _name in $_components; do "zc_set_$_name"; done
 
     zc_paint $1
 }
@@ -128,33 +128,56 @@ function zc_paint {
     if (( $# == 0 )); then
         zc_unpack components _components
     else
-        _clear=$ZC_CLEAR_LINE
+        _clear=$ZC_CLEAR_LINE # find a way to make this clear window only, or skip
     fi
 
-    for name in $_components; do
-        _h=$zc[$name:h]
+    for _name in $_components; do
 
-        case $zc[$name:w] in
-            (:auto) _w=${#zc[$name:data]} ;;
-            (*)     _w=$zc[$name:w]       ;;
+        # get component properties
+
+        case $zc[$_name:w] in
+            (*) _h=$zc[$_name:h] ;;
         esac
 
-        case $zc[$name:y] in
+        case $zc[$_name:w] in
+            (:auto) _w=${#zc[$_name:data]} ;;
+            (*)     _w=$zc[$_name:w]       ;;
+        esac
+
+        case $zc[$_name:y] in
             (:auto) _y=$(( ( (zc[vh] - _h) / 2 ) + zc[vh] % 2 )) ;;
-            (*)     _y=$zc[$name:y] ;;
+            (*)     _y=$zc[$_name:y] ;;
         esac
 
-        case $zc[$name:x] in
+        case $zc[$_name:x] in
             (:auto) _x=$(( ( (zc[vw] - _w) / 2 ) + zc[vw] % 2 )) ;;
-            (*)     _x=$zc[$name:x] ;;
+            (*)     _x=$zc[$_name:x] ;;
         esac
 
         _origin="${ZC_CSI}${_y};${_x}H"
-        _data=$zc[$name:data]
 
-        _staged+=($_origin $_data)
+
+        # process component data
+
+        _data=$zc[$_name:data]
+
+        case $zc[$_name:data:format] in
+            (masked)
+                clear="${ZC_CSI}0m  "
+                active="${ZC_CSI}7m  "
+
+                _data=${_data//1/$active}
+                _data=${_data//0/$clear}
+
+                _data="$_data${ZC_CSI}0m"
+                ;;
+        esac
+
+
+        # export
+
+        _staged+=($_origin ${_data//@/${ZC_CSI}E})
     done
-
 
     zc_write $_clear ${(j::)_staged}
 }
@@ -187,7 +210,6 @@ function zc_input {
         case $_key in
             (q|Q) break ;;
             (:)   zc[commander]=1; zc_cycle commander ;;
-            (*)   ;;
         esac
     fi
 }
@@ -198,6 +220,50 @@ function zc_parse {
 
 
 ###### components
+
+function zc_add_face:default {
+    zc[face:default:y]=0
+    zc[face:default:x]=0
+    zc[face:default:h]=5
+    zc[face:default:w]=zc[vw]
+
+    zc_set_face:default
+}
+
+function zc_set_face:default {
+    local _time
+    strftime -s _time "%R:%S"
+
+    local _mask=()
+    local _staged=()
+
+    # mask character
+    for _character in ${(s::)_time}; do
+        case $_character in
+            (0) _mask=(111 101 101 101 111) ;;
+            (1) _mask=(110 010 010 010 111) ;;
+            (2) _mask=(111 001 111 100 111) ;;
+            (3) _mask=(111 001 111 001 111) ;;
+            (4) _mask=(101 101 111 001 001) ;;
+            (5) _mask=(111 100 111 001 111) ;;
+            (6) _mask=(111 100 111 101 111) ;;
+            (7) _mask=(111 001 001 001 001) ;;
+            (8) _mask=(111 101 111 101 111) ;;
+            (9) _mask=(111 101 111 001 111) ;;
+            (:) _mask=(  0   1   0   1   0) ;;
+        esac
+
+        _staged+=(${(j:@:)_mask})
+    done
+
+    # interleave and flatten
+    zc_interleave _staged
+    for _i in {1..${#_staged}}; do _staged[$_i]=${_staged[$_i]//@/0}; done
+
+    # save
+    zc[face:default:data:format]=masked
+    zc_pack face:default:data _staged
+}
 
 function zc_add_date {
     zc[date:y]=:auto
@@ -237,12 +303,44 @@ function zc_set_commander {
     if (( zc[commander] )); then zc[commander:data]=:${_command//\\/\\\\}$ZC_CURSOR_SHOW; else zc[commander:data]=$ZC_CURSOR_HIDE; fi
 }
 
+
 ###### helpers
 
 function zc_write { print -n ${(j::)@} }
 
-function zc_pack   { zc[$1]=${(Pj.:.)2} }
-function zc_unpack { : ${(AP)2::=${(s.:.)zc[$1]}} }
+function zc_pack   { zc[$1]=${(Pj:@:)2} }
+function zc_unpack { : ${(AP)2::=${(s:@:)zc[$1]}} }
+
+function zc_interleave {
+    local _array=(${(AP)1})
+
+    # determine max sub-length
+
+    local _length=0
+
+    for _mask in $_array; do
+        local _m=(${(As:@:)_mask})
+        if (( $#_m > _length )); then _length=${#_m}; fi
+    done
+
+
+    # interleave
+
+    local _interleaved=()
+
+    for _i in {1..$_length}; do
+        local _select=()
+
+        for _mask in $_array; do
+            local _m=(${(As:@:)_mask})
+            _select+=($_m[$_i])
+        done
+
+        _interleaved+=(${(j:@:)_select})
+    done
+
+    : ${(AP)1::=$_interleaved}
+}
 
 
 ###### director
