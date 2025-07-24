@@ -1,21 +1,22 @@
 #!/usr/bin/env zsh
 
-#                    dP                dP                   dP
-#                    88                88                   88
-#  d888888b .d8888b. 88d888b. .d8888b. 88 .d8888b. .d8888b. 88  .dP
-#     .d8P' Y8ooooo. 88'  `88 88'  `"" 88 88'  `88 88'  `"" 88888"
-#   .Y8P          88 88    88 88.  ... 88 88.  .88 88.  ... 88  `8b.
-#  d888888P `88888P' dP    dP `88888P' dP `88888P' `88888P' dP   `YP
-# ooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
+#                      dP                dP                   dP
+#                      88                88                   88
+#    d888888b .d8888b. 88d888b. .d8888b. 88 .d8888b. .d8888b. 88  .dP
+#       .d8P' Y8ooooo. 88'  `88 88'  `"" 88 88'  `88 88'  `"" 88888"
+#     .Y8P          88 88    88 88.  ... 88 88.  .88 88.  ... 88  `8b.
+#    d888888P `88888P' dP    dP `88888P' dP `88888P' `88888P' dP   `YP
 #
-# copyright (c) 2025 Malakai Smith (@tenault)
-# originally forked from @octobanana/peaclock
+# ooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
+# O                                                                     O
+# O             copyright (c) 2025 Malakai Smith (@tenault)             O
+# O             originally forked from @octobanana/peaclock             O
+# O                                                                     O
+# ooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
 #
-# ooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
-#
-# This Source Code Form is subject to the terms of the Mozilla Public
-# License, v. 2.0. If a copy of the MPL was not distributed with this
-# file, you can obtain one at https://mozilla.org/MPL/2.0
+#   This Source Code Form is subject to the terms of the Mozilla Public
+#   License, v. 2.0. If a copy of the MPL was not distributed with this
+#   file, you can obtain one at https://mozilla.org/MPL/2.0
 
 
 ###### constants
@@ -36,7 +37,7 @@ ZC_CURSOR_HIDE=${ZC_CSI}?25l
 
 ###### ztc
 
-function zc_build {
+function zc_build { # set view area + build components
     zc[vh]=$LINES
     zc[vw]=$COLUMNS
 
@@ -48,30 +49,28 @@ function zc_build {
     zc_paint
 }
 
-function zc_drive {
+function zc_drive { # run clock
     float _epoch=$EPOCHREALTIME
     integer _epsilon=0
 
     while true; do
-        # handle inputs
-        zc_input
-
-        # check for resizes
-        zc_align
+        zc_input # handle inputs
+        zc_align # check for resizes
 
         # repaint clock
         integer _duration=${$(( (EPOCHREALTIME - _epoch) * 1000 ))%%.*}
-
         if (( _duration >= ( zc[:rate:refresh] - _epsilon ) )); then
-            zc_cycle
+
+            zc_cycle # update component data + repaint
 
             _epoch=$EPOCHREALTIME
             _epsilon=$(( (_duration - (zc[:rate:refresh] - _epsilon)) % zc[:rate:refresh] ))
+
         fi
     done
 }
 
-function zc_clean {
+function zc_clean { # dissolve clock + restore terminal state
     integer _code=${1:-0}
     zc_write $ZC_CURSOR_SHOW $ZC_EXIT
     exit $_code
@@ -80,8 +79,8 @@ function zc_clean {
 
 ###### plonk
 
-function zc_plonk {
-    zc[:date]="%a %b %d - %r"
+function zc_plonk { # set config settings + register components
+    zc[:date]="%a %b %d %p"
     zc[:rate:input]=50
     zc[:rate:refresh]=1000
 
@@ -92,14 +91,14 @@ function zc_plonk {
 
 ###### facades
 
-function zc_align {
+function zc_align { # check for resizes + rebuild
     LINES=
     COLUMNS=
 
     if (( LINES != zc[vh] || COLUMNS != zc[vw] )); then zc_build; fi
 }
 
-function zc_cycle {
+function zc_cycle { # update component data + repaint
     local _components=$@
     if (( $# == 0 )); then zc_unpack components _components; fi
 
@@ -111,17 +110,9 @@ function zc_cycle {
 
 ###### engines
 
-function zc_paint {
-    integer _y
-    integer _x
-    integer _h
-    integer _w
+function zc_paint { # translate component data for rendering
 
-    local _data
-
-    local _staged=()
     local _clear=$ZC_CLEAR
-    local _origin
 
     local _components=$@
 
@@ -131,40 +122,116 @@ function zc_paint {
         _clear=$ZC_CLEAR_LINE # find a way to make this clear window only, or skip
     fi
 
+
+    # reset bounds
+
+    zc[paint:my]=$zc[vh] # min-y
+    zc[paint:mx]=$zc[vw] # min-x
+    zc[paint:ym]=0       # y-max
+    zc[paint:xm]=0       # x-max
+
+    zc[paint:h]=0
+    zc[paint:w]=0
+
+
+    # get component properties
+
     for _name in $_components; do
 
-        # get component properties
+        # unpack component data
 
-        case $zc[$_name:w] in
-            (*) _h=$zc[$_name:h] ;;
+        integer _y
+        integer _x
+        integer _h
+        integer _w
+
+        local _array=()
+        zc_unpack ${_name}:data _array
+
+
+        # determine component areas
+
+        case $zc[${_name}:h] in
+            (:auto) # set height to number of lines
+                _h=${#_array} ;;
+            (*)
+                _h=$zc[${_name}:h] ;;
         esac
 
-        case $zc[$_name:w] in
-            (:auto) _w=${#zc[$_name:data]} ;;
-            (*)     _w=$zc[$_name:w]       ;;
+        case $zc[${_name}:w] in
+            (:auto) # set width to length of longest line
+                local _length=0
+                for _item in $_array; do if (( ${#_item} > _length )); then _length=${#_item}; fi; done
+                _w=$_length
+                ;;
+            (*)
+                _w=$zc[${_name}:w]
+                ;;
         esac
 
-        case $zc[$_name:y] in
-            (:auto) _y=$(( ( (zc[vh] - _h) / 2 ) + zc[vh] % 2 )) ;;
-            (*)     _y=$zc[$_name:y] ;;
+        case $zc[${_name}:y] in
+            (:auto) # center component vertically
+                _y=$(( ( (zc[vh] - _h) / 2 ) + 1 )) ;;
+            (*)
+                _y=$zc[${_name}:y] ;;
         esac
 
-        case $zc[$_name:x] in
-            (:auto) _x=$(( ( (zc[vw] - _w) / 2 ) + zc[vw] % 2 )) ;;
-            (*)     _x=$zc[$_name:x] ;;
+        case $zc[${_name}:x] in
+            (:auto) # center component horizontally
+                _x=$(( ( (zc[vw] - _w) / 2 ) + 1 )) ;;
+            (*)
+                _x=$zc[${_name}:x] ;;
         esac
 
-        _origin="${ZC_CSI}${_y};${_x}H"
+
+        # save calculation + update bounds
+
+        zc[paint:${_name}:h]=$_h
+        zc[paint:${_name}:w]=$_w
+        zc[paint:${_name}:y]=$_y
+        zc[paint:${_name}:x]=$_x
+
+        if (( ! zc[${_name}:overlay] )); then
+
+            (( zc[paint:h] += $_h )) # only for layout:vertical when position:auto
+
+            if (( _y + _h > zc[paint:ym] )); then zc[paint:ym]=$((_y + _h)); fi
+            if (( _x + _w > zc[paint:xm] )); then zc[paint:xm]=$((_x + _w)); fi
+            if      (( _y < zc[paint:my] )); then zc[paint:my]=$_y; fi
+            if      (( _x < zc[paint:mx] )); then zc[paint:mx]=$_x; fi
+        fi
+    done
 
 
-        # process component data
+    # declare render zone + adjust origins
 
-        _data=$zc[$_name:data]
+    # zc[paint:h]=$(( zc[paint:ym] - zc[paint:my] ))
+    zc[paint:w]=$(( zc[paint:xm] - zc[paint:mx] ))
+    zc[paint:my]=$(( ( ( zc[vh] - zc[paint:h] ) / 2 ) + 1 )) # override h for position:auto
 
-        case $zc[$_name:data:format] in
+    integer _dy=0
+
+    for _name in $_components; do
+        if (( ! zc[${_name}:overlay] )); then
+            zc[paint:${_name}:y]=$(( zc[paint:my] + _dy ))
+            (( _dy += zc[paint:${_name}:h] ))
+        fi
+    done
+
+
+    # paint component data
+
+    local _staged=()
+
+    for _name in $_components; do
+        local _data=$zc[${_name}:data]
+
+        local _origin="${ZC_CSI}${zc[paint:${_name}:y]};${zc[paint:${_name}:x]}H"
+
+        case $zc[${_name}:data:format] in
             (masked)
-                clear="${ZC_CSI}0m  "
-                active="${ZC_CSI}7m  "
+                clear="${ZC_CSI}0m "
+                active="${ZC_CSI}7m "
 
                 _data=${_data//1/$active}
                 _data=${_data//0/$clear}
@@ -173,16 +240,17 @@ function zc_paint {
                 ;;
         esac
 
-
         # export
-
-        _staged+=($_origin ${_data//@/${ZC_CSI}E})
+        _staged+=($_origin ${_data//@/${ZC_CSI}E${ZC_CSI}$(( zc[paint:${_name}:x] - 1 ))C})
     done
+
+
+    # render
 
     zc_write $_clear ${(j::)_staged}
 }
 
-function zc_input {
+function zc_input { # detect user inputs + build commands
     local _key
     read -s -t $(( zc[:rate:input] / 1000.0 )) -k 1 _key
 
@@ -222,17 +290,17 @@ function zc_parse {
 ###### components
 
 function zc_add_face:default {
-    zc[face:default:y]=0
-    zc[face:default:x]=0
-    zc[face:default:h]=5
-    zc[face:default:w]=zc[vw]
+    zc[face:default:y]=:auto
+    zc[face:default:x]=:auto
+    zc[face:default:h]=:auto
+    zc[face:default:w]=:auto
 
     zc_set_face:default
 }
 
 function zc_set_face:default {
     local _time
-    strftime -s _time "%R:%S"
+    strftime -s _time "%l:%M"
 
     local _mask=()
     local _staged=()
@@ -256,7 +324,7 @@ function zc_set_face:default {
         _staged+=(${(j:@:)_mask})
     done
 
-    # interleave and flatten
+    # interleave+flatten and insert padding
     zc_interleave _staged
     for _i in {1..${#_staged}}; do _staged[$_i]=${_staged[$_i]//@/0}; done
 
@@ -268,7 +336,7 @@ function zc_set_face:default {
 function zc_add_date {
     zc[date:y]=:auto
     zc[date:x]=:auto
-    zc[date:h]=1
+    zc[date:h]=:auto
     zc[date:w]=:auto
 
     zc_set_date
@@ -282,14 +350,15 @@ function zc_set_date {
 }
 
 function zc_add_commander {
-    zc[:command]=${zc[:command]:-}
-
     zc[commander:y]=$zc[vh]
     zc[commander:x]=0
     zc[commander:h]=1
     zc[commander:w]=$zc[vw]
 
+    zc[commander:overlay]=1
+
     zc[commander]=${zc[commander]:-0}
+    zc[:command]=${zc[:command]:-}
 
     zc_set_commander
 }
@@ -306,21 +375,25 @@ function zc_set_commander {
 
 ###### helpers
 
-function zc_write { print -n ${(j::)@} }
+function zc_write { print -n ${(j::)@} } # render clock paints
 
-function zc_pack   { zc[$1]=${(Pj:@:)2} }
-function zc_unpack { : ${(AP)2::=${(s:@:)zc[$1]}} }
+function zc_pack   { zc[$1]=${(Pj:@:)2} }           # (foo bar baz) -> zc[key]="foo@bar@baz"
+function zc_unpack { : ${(AP)2::=${(s:@:)zc[$1]}} } # zc[key]="foo@bar@baz" -> (foo bar baz)
 
-function zc_interleave {
+function zc_interleave { # ((1 1 1) (2 2 2) (3 3 3)) -> ((1 2 3) (1 2 3) (1 2 3))
+
+    # import
+
     local _array=(${(AP)1})
+
 
     # determine max sub-length
 
     local _length=0
 
-    for _mask in $_array; do
-        local _m=(${(As:@:)_mask})
-        if (( $#_m > _length )); then _length=${#_m}; fi
+    for _item in $_array; do
+        local _sub=(${(As:@:)_item})
+        if (( $#_sub > _length )); then _length=${#_sub}; fi
     done
 
 
@@ -331,13 +404,16 @@ function zc_interleave {
     for _i in {1..$_length}; do
         local _select=()
 
-        for _mask in $_array; do
-            local _m=(${(As:@:)_mask})
-            _select+=($_m[$_i])
+        for _item in $_array; do
+            local _sub=(${(As:@:)_item})
+            _select+=($_sub[$_i])
         done
 
         _interleaved+=(${(j:@:)_select})
     done
+
+
+    # export
 
     : ${(AP)1::=$_interleaved}
 }
