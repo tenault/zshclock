@@ -21,117 +21,117 @@
 
 ###### constants
 
-ZC_ESC="\x1b"
-ZC_CSI=${ZC_ESC}[
+ZTC_ESC="\x1b"
+ZTC_CSI=${ZTC_ESC}[
 
-ZC_CLEAR=${ZC_CSI}2J
-ZC_CLEAR_LINE=${ZC_CSI}2K
+ZTC_CLEAR=${ZTC_CSI}2J
+ZTC_CLEAR_LINE=${ZTC_CSI}2K
 
-ZC_INIT=${ZC_CSI}?1049h
-ZC_EXIT=${ZC_CSI}?1049l
+ZTC_INIT=${ZTC_CSI}?1049h
+ZTC_EXIT=${ZTC_CSI}?1049l
 
-ZC_CURSOR_HOME=${ZC_CSI}H
-ZC_CURSOR_SHOW=${ZC_CSI}?25h
-ZC_CURSOR_HIDE=${ZC_CSI}?25l
+ZTC_CURSOR_HOME=${ZTC_CSI}H
+ZTC_CURSOR_SHOW=${ZTC_CSI}?25h
+ZTC_CURSOR_HIDE=${ZTC_CSI}?25l
 
 
 ###### ztc
 
-function zc_build { # set view area + build components
-    zc[vh]=$LINES
-    zc[vw]=$COLUMNS
+function ztc:build { # set view area + build components
+    ztc[vh]=$LINES
+    ztc[vw]=$COLUMNS
 
     local _components
-    zc_unpack components _components
+    ztc:unpack components _components
 
-    for _name in $_components; do "zc_add_$_name"; done
+    for _name in $_components; do "ztc:add:$_name"; done
 
-    zc_paint
+    ztc:paint
 }
 
-function zc_drive { # run clock
+function ztc:drive { # run clock
     float _epoch=$EPOCHREALTIME
     integer _epsilon=0
 
     while true; do
-        zc_input # handle inputs
-        zc_align # check for resizes
+        ztc:input # handle inputs
+        ztc:align # check for resizes
 
         # repaint clock
         integer _duration=${$(( (EPOCHREALTIME - _epoch) * 1000 ))%%.*}
-        if (( _duration >= ( zc[:rate:refresh] - _epsilon ) )); then
+        if (( _duration >= ( ztc[:rate:refresh] - _epsilon ) )); then
 
-            zc_cycle # update component data + repaint
+            ztc:cycle # update component data + repaint
 
             _epoch=$EPOCHREALTIME
-            _epsilon=$(( (_duration - (zc[:rate:refresh] - _epsilon)) % zc[:rate:refresh] ))
+            _epsilon=$(( (_duration - (ztc[:rate:refresh] - _epsilon)) % ztc[:rate:refresh] ))
 
         fi
     done
 }
 
-function zc_clean { # dissolve clock + restore terminal state
+function ztc:clean { # dissolve clock + restore terminal state
     integer _code=${1:-0}
-    zc_write $ZC_CURSOR_SHOW $ZC_EXIT
+    ztc:write $ZTC_CURSOR_SHOW $ZTC_EXIT
     exit $_code
 }
 
 
 ###### plonk
 
-function zc_plonk { # set config settings + register components
-    zc[:date]="%a %b %d %p"
-    zc[:rate:input]=50
-    zc[:rate:refresh]=1000
+function ztc:plonk { # set config settings + register components
+    ztc[:date]="%a %b %d %p"
+    ztc[:rate:input]=50
+    ztc[:rate:refresh]=1000
 
     local _components=(face:default date commander)
-    zc_pack components _components
+    ztc:pack components _components
 }
 
 
 ###### facades
 
-function zc_align { # check for resizes + rebuild
+function ztc:align { # check for resizes + rebuild
     LINES=
     COLUMNS=
 
-    if (( LINES != zc[vh] || COLUMNS != zc[vw] )); then zc_build; fi
+    if (( LINES != ztc[vh] || COLUMNS != ztc[vw] )); then ztc:build; fi
 }
 
-function zc_cycle { # update component data + repaint
+function ztc:cycle { # update component data + repaint
     local _components=$@
-    if (( $# == 0 )); then zc_unpack components _components; fi
+    if (( $# == 0 )); then ztc:unpack components _components; fi
 
-    for _name in $_components; do "zc_set_$_name"; done
+    for _name in $_components; do "ztc:set:$_name"; done
 
-    zc_paint $1
+    ztc:paint $1
 }
 
 
 ###### engines
 
-function zc_paint { # translate component data for rendering
+function ztc:paint { # translate component data for rendering
 
-    local _clear=$ZC_CLEAR
+    local _clear=$ZTC_CLEAR
 
     local _components=$@
 
     if (( $# == 0 )); then
-        zc_unpack components _components
+        ztc:unpack components _components
     else
-        _clear=$ZC_CLEAR_LINE # find a way to make this clear window only, or skip
+        _clear=$ZTC_CLEAR_LINE # find a way to make this clear window only, or skip
     fi
 
 
     # reset bounds
 
-    zc[paint:my]=$zc[vh] # min-y
-    zc[paint:mx]=$zc[vw] # min-x
-    zc[paint:ym]=0       # y-max
-    zc[paint:xm]=0       # x-max
+    ztc[paint:my]=$ztc[vh] # min-y
+    ztc[paint:mx]=$ztc[vw] # min-x
+    ztc[paint:ym]=0       # y-max
+    ztc[paint:xm]=0       # x-max
 
-    zc[paint:h]=0
-    zc[paint:w]=0
+    ztc[paint:h]=0
+    ztc[paint:w]=0
 
 
     # get component properties
@@ -146,75 +146,75 @@ function zc_paint { # translate component data for rendering
         integer _w
 
         local _array=()
-        zc_unpack ${_name}:data _array
+        ztc:unpack ${_name}:data _array
 
 
         # determine component areas
 
-        case $zc[${_name}:h] in
+        case $ztc[${_name}:h] in
             (:auto) # set height to number of lines
                 _h=${#_array} ;;
             (*)
-                _h=$zc[${_name}:h] ;;
+                _h=$ztc[${_name}:h] ;;
         esac
 
-        case $zc[${_name}:w] in
+        case $ztc[${_name}:w] in
             (:auto) # set width to length of longest line
                 local _length=0
                 for _item in $_array; do if (( ${#_item} > _length )); then _length=${#_item}; fi; done
                 _w=$_length
                 ;;
             (*)
-                _w=$zc[${_name}:w]
+                _w=$ztc[${_name}:w]
                 ;;
         esac
 
-        case $zc[${_name}:y] in
+        case $ztc[${_name}:y] in
             (:auto) # center component vertically
-                _y=$(( ( (zc[vh] - _h) / 2 ) + 1 )) ;;
+                _y=$(( ( (ztc[vh] - _h) / 2 ) + 1 )) ;;
             (*)
-                _y=$zc[${_name}:y] ;;
+                _y=$ztc[${_name}:y] ;;
         esac
 
-        case $zc[${_name}:x] in
+        case $ztc[${_name}:x] in
             (:auto) # center component horizontally
-                _x=$(( ( (zc[vw] - _w) / 2 ) + 1 )) ;;
+                _x=$(( ( (ztc[vw] - _w) / 2 ) + 1 )) ;;
             (*)
-                _x=$zc[${_name}:x] ;;
+                _x=$ztc[${_name}:x] ;;
         esac
 
 
         # save calculation + update bounds
 
-        zc[paint:${_name}:h]=$_h
-        zc[paint:${_name}:w]=$_w
-        zc[paint:${_name}:y]=$_y
-        zc[paint:${_name}:x]=$_x
+        ztc[paint:${_name}:h]=$_h
+        ztc[paint:${_name}:w]=$_w
+        ztc[paint:${_name}:y]=$_y
+        ztc[paint:${_name}:x]=$_x
 
-        if (( ! zc[${_name}:overlay] )); then
+        if (( ! ztc[${_name}:overlay] )); then
 
-            (( zc[paint:h] += $_h )) # only for layout:vertical when position:auto
+            (( ztc[paint:h] += $_h )) # only for layout:vertical when position:auto
 
-            if (( _y + _h > zc[paint:ym] )); then zc[paint:ym]=$((_y + _h)); fi
-            if (( _x + _w > zc[paint:xm] )); then zc[paint:xm]=$((_x + _w)); fi
-            if      (( _y < zc[paint:my] )); then zc[paint:my]=$_y; fi
-            if      (( _x < zc[paint:mx] )); then zc[paint:mx]=$_x; fi
+            if (( _y + _h > ztc[paint:ym] )); then ztc[paint:ym]=$((_y + _h)); fi
+            if (( _x + _w > ztc[paint:xm] )); then ztc[paint:xm]=$((_x + _w)); fi
+            if      (( _y < ztc[paint:my] )); then ztc[paint:my]=$_y; fi
+            if      (( _x < ztc[paint:mx] )); then ztc[paint:mx]=$_x; fi
         fi
     done
 
 
     # declare render zone + adjust origins
 
-    # zc[paint:h]=$(( zc[paint:ym] - zc[paint:my] ))
-    zc[paint:w]=$(( zc[paint:xm] - zc[paint:mx] ))
-    zc[paint:my]=$(( ( ( zc[vh] - zc[paint:h] ) / 2 ) + 1 )) # override h for position:auto
+    # ztc[paint:h]=$(( ztc[paint:ym] - ztc[paint:my] ))
+    ztc[paint:w]=$(( ztc[paint:xm] - ztc[paint:mx] ))
+    ztc[paint:my]=$(( ( ( ztc[vh] - ztc[paint:h] ) / 2 ) + 1 )) # override h for position:auto
 
     integer _dy=0
 
     for _name in $_components; do
-        if (( ! zc[${_name}:overlay] )); then
-            zc[paint:${_name}:y]=$(( zc[paint:my] + _dy ))
-            (( _dy += zc[paint:${_name}:h] ))
+        if (( ! ztc[${_name}:overlay] )); then
+            ztc[paint:${_name}:y]=$(( ztc[paint:my] + _dy ))
+            (( _dy += ztc[paint:${_name}:h] ))
         fi
     done
 
@@ -224,81 +224,83 @@ function zc_paint { # translate component data for rendering
     local _staged=()
 
     for _name in $_components; do
-        local _data=$zc[${_name}:data]
+        local _data=$ztc[${_name}:data]
 
-        local _origin="${ZC_CSI}${zc[paint:${_name}:y]};${zc[paint:${_name}:x]}H"
+        local _origin="${ZTC_CSI}${ztc[paint:${_name}:y]};${ztc[paint:${_name}:x]}H"
 
-        case $zc[${_name}:data:format] in
+        case $ztc[${_name}:data:format] in
             (masked)
-                clear="${ZC_CSI}0m "
-                active="${ZC_CSI}7m "
+                clear="${ZTC_CSI}0m "
+                active="${ZTC_CSI}7m "
 
                 _data=${_data//1/$active}
                 _data=${_data//0/$clear}
 
-                _data="$_data${ZC_CSI}0m"
+                _data="$_data${ZTC_CSI}0m"
                 ;;
         esac
 
         # export
-        _staged+=($_origin ${_data//@/${ZC_CSI}E${ZC_CSI}$(( zc[paint:${_name}:x] - 1 ))C})
+        _staged+=($_origin ${_data//@/${ZTC_CSI}E${ZTC_CSI}$(( ztc[paint:${_name}:x] - 1 ))C})
     done
 
 
     # render
 
-    zc_write $_clear ${(j::)_staged}
+    ztc:write $_clear ${(j::)_staged}
 }
 
-function zc_input { # detect user inputs + build commands
+function ztc:input { # detect user inputs + build commands
     local _key
-    read -s -t $(( zc[:rate:input] / 1000.0 )) -k 1 _key
+    read -s -t $(( ztc[:rate:input] / 1000.0 )) -k 1 _key
 
-    if (( zc[commander] )); then
+    if (( ztc[commander:active] )); then
         case $_key in
             ($'\e')
-                zc[:command]=""
-                zc[commander]=0
+                ztc[commander:active]=0
+                ztc[commander:cmd]=""
                 ;;
             ($'\b'|$'\x7f')
-                zc[:command]=${zc[:command]%?}
+                ztc[commander:cmd]=${ztc[commander:cmd]%?}
                 ;;
             ($'\n'|$'\r')
-                # parse command
-                zc[:command]=""
-                zc[commander]=0
+                ztc:parse $ztc[commander:cmd]
+                ztc[commander:active]=0
+                ztc[commander:cmd]=""
                 ;;
             (*)
-                zc[:command]+=$_key
+                ztc[commander:cmd]+=$_key
                 ;;
         esac
 
-        zc_cycle commander
+        ztc:cycle commander
     else
         case $_key in
-            (q|Q) break ;;
-            (:)   zc[commander]=1; zc_cycle commander ;;
+            (q|Q) ztc:clean ;;
+            (:)   ztc[commander:active]=1; ztc:cycle commander ;;
         esac
     fi
 }
 
-function zc_parse {
-
+function ztc:parse {
+case ${(L)1} in
+        (quit|exit) ztc:clean ;;
+    esac
 }
 
 
 ###### components
 
-function zc_add_face:default {
-    zc[face:default:y]=:auto
-    zc[face:default:x]=:auto
-    zc[face:default:h]=:auto
-    zc[face:default:w]=:auto
+function ztc:add:face:default {
+    ztc[face:default:y]=:auto
+    ztc[face:default:x]=:auto
+    ztc[face:default:h]=:auto
+    ztc[face:default:w]=:auto
 
-    zc_set_face:default
+    ztc:set:face:default
 }
 
-function zc_set_face:default {
+function ztc:set:face:default {
     local _time
     strftime -s _time "%l:%M"
 
@@ -325,62 +327,64 @@ function zc_set_face:default {
     done
 
     # interleave+flatten and insert padding
-    zc_interleave _staged
+    ztc:interleave _staged
     for _i in {1..${#_staged}}; do _staged[$_i]=${_staged[$_i]//@/0}; done
 
     # save
-    zc[face:default:data:format]=masked
-    zc_pack face:default:data _staged
+    ztc[face:default:data:format]=masked
+    ztc:pack face:default:data _staged
 }
 
-function zc_add_date {
-    zc[date:y]=:auto
-    zc[date:x]=:auto
-    zc[date:h]=:auto
-    zc[date:w]=:auto
+function ztc:add:date {
+    ztc[date:y]=:auto
+    ztc[date:x]=:auto
+    ztc[date:h]=:auto
+    ztc[date:w]=:auto
 
-    zc_set_date
+    ztc:set:date
 }
 
-function zc_set_date {
+function ztc:set:date {
     local _date
-    strftime -s _date $zc[:date]
+    strftime -s _date $ztc[:date]
 
-    zc[date:data]=$_date
+    ztc[date:data]=$_date
 }
 
-function zc_add_commander {
-    zc[commander:y]=$zc[vh]
-    zc[commander:x]=0
-    zc[commander:h]=1
-    zc[commander:w]=$zc[vw]
+function ztc:add:commander {
+    ztc[commander:y]=$ztc[vh]
+    ztc[commander:x]=0
+    ztc[commander:h]=1
+    ztc[commander:w]=$ztc[vw]
 
-    zc[commander:overlay]=1
+    ztc[commander:overlay]=1
 
-    zc[commander]=${zc[commander]:-0}
-    zc[:command]=${zc[:command]:-}
+    ztc[commander:active]=${ztc[commander:active]:-0}
+    ztc[commander:cmd]=${ztc[commander:cmd]:-}
 
-    zc_set_commander
+    ztc:set:commander
 }
 
-function zc_set_commander {
-    local _command=$zc[:command]
+function ztc:set:commander {
+    # import
+    local _cmd=$ztc[commander:cmd]
 
     # truncate overflows
-    if (( ${#_command} >= zc[commander:w] )); then _command=...${_command:$(( -zc[commander:w] + 4 ))}; fi
+    if (( ${#_cmd} >= ztc[commander:w] )); then _cmd=...${_cmd:$(( -ztc[commander:w] + 4 ))}; fi
 
-    if (( zc[commander] )); then zc[commander:data]=:${_command//\\/\\\\}$ZC_CURSOR_SHOW; else zc[commander:data]=$ZC_CURSOR_HIDE; fi
+    # escape backslashes + export
+    if (( ztc[commander:active] )); then ztc[commander:data]=:${_cmd//\\/\\\\}$ZTC_CURSOR_SHOW; else ztc[commander:data]=$ZTC_CURSOR_HIDE; fi
 }
 
 
 ###### helpers
 
-function zc_write { print -n ${(j::)@} } # render clock paints
+function ztc:write { print -n ${(j::)@} } # render clock paints
 
-function zc_pack   { zc[$1]=${(Pj:@:)2} }           # (foo bar baz) -> zc[key]="foo@bar@baz"
-function zc_unpack { : ${(AP)2::=${(s:@:)zc[$1]}} } # zc[key]="foo@bar@baz" -> (foo bar baz)
+function ztc:pack   { ztc[$1]=${(Pj:@:)2} }           # (foo bar baz) -> ztc[key]="foo@bar@baz"
+function ztc:unpack { : ${(AP)2::=${(s:@:)ztc[$1]}} } # ztc[key]="foo@bar@baz" -> (foo bar baz)
 
-function zc_interleave { # ((1 1 1) (2 2 2) (3 3 3)) -> ((1 2 3) (1 2 3) (1 2 3))
+function ztc:interleave { # ((1 1 1) (2 2 2) (3 3 3)) -> ((1 2 3) (1 2 3) (1 2 3))
 
     # import
 
@@ -422,23 +426,23 @@ function zc_interleave { # ((1 1 1) (2 2 2) (3 3 3)) -> ((1 2 3) (1 2 3) (1 2 3)
 ###### director
 
 function zsh_that_clock {
-    trap 'zc_clean 1' INT
+    trap 'ztc:clean 1' INT
 
     zmodload zsh/datetime
 
-    typeset -A zc=()
+    typeset -A ztc=()
 
     # config
-    zc_plonk
+    ztc:plonk
 
     # init
-    zc_write $ZC_INIT
+    ztc:write $ZTC_INIT
 
     # ztc
-    zc_build && zc_drive
+    ztc:build && ztc:drive
 
     # clean
-    zc_clean
+    ztc:clean
 }
 
 zsh_that_clock
