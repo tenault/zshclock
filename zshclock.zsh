@@ -34,6 +34,8 @@ ZTC_CURSOR_HOME=${ZTC_CSI}H
 ZTC_CURSOR_SHOW=${ZTC_CSI}?25h
 ZTC_CURSOR_HIDE=${ZTC_CSI}?25l
 
+ZTC_COLOR_RESET=${ZTC_CSI}0m
+ZTC_COLOR_REVERSE=${ZTC_CSI}7m
 
 ###### ztc
 
@@ -57,6 +59,9 @@ function ztc:drive { # run clock
         ztc:input # handle inputs
         ztc:align # check for resizes
 
+        # clear status
+        if [[ ztc[commander:status] != '' && ${$(( (EPOCHREALTIME - ztc[commander:epoch]) * 1000 ))%%.*} -gt ztc[:rate:status] ]]; then ztc[commander:status]=''; fi
+
         # repaint clock
         integer _duration=${$(( (EPOCHREALTIME - _epoch) * 1000 ))%%.*}
         if (( _duration >= ( ztc[:rate:refresh] - _epsilon ) )); then
@@ -79,10 +84,14 @@ function ztc:clean { # dissolve clock + restore terminal state
 
 ###### plonk
 
-function ztc:plonk { # set config settings + register components
+function ztc:plonk { # set config settings + register commands and components
     ztc[:date]="%a %b %d %p"
     ztc[:rate:input]=50
     ztc[:rate:refresh]=1000
+    ztc[:rate:status]=5000
+
+    local _commands=(date)
+    ztc:pack :commands _commands
 
     local _components=(face:default date commander)
     ztc:pack components _components
@@ -107,8 +116,22 @@ function ztc:cycle { # update component data + repaint
     ztc:paint $1
 }
 
+function ztc:commander:enter {
+    ztc[commander:active]=1
+    ztc:cycle commander
+}
+
+function ztc:commander:exit {
+    ztc[commander:status]=$1
+    ztc[commander:epoch]=$EPOCHREALTIME
+    ztc[commander:active]=0
+    ztc[commander:input]=''
+}
+
 
 ###### engines
+
+### painter
 
 function ztc:paint { # translate component data for rendering
 
@@ -230,13 +253,13 @@ function ztc:paint { # translate component data for rendering
 
         case $ztc[${_name}:data:format] in
             (masked)
-                clear="${ZTC_CSI}0m "
-                active="${ZTC_CSI}7m "
+                clear="${ZTC_COLOR_RESET} "
+                active="${ZTC_COLOR_REVERSE} "
 
                 _data=${_data//1/$active}
                 _data=${_data//0/$clear}
 
-                _data="$_data${ZTC_CSI}0m"
+                _data="$_data$ZTC_COLOR_RESET"
                 ;;
         esac
 
@@ -250,6 +273,9 @@ function ztc:paint { # translate component data for rendering
     ztc:write $_clear ${(j::)_staged}
 }
 
+
+### commander
+
 function ztc:input { # detect user inputs + build commands
     local _key
     read -s -t $(( ztc[:rate:input] / 1000.0 )) -k 1 _key
@@ -257,19 +283,16 @@ function ztc:input { # detect user inputs + build commands
     if (( ztc[commander:active] )); then
         case $_key in
             ($'\e')
-                ztc[commander:active]=0
-                ztc[commander:cmd]=""
+                ztc:commander:exit
                 ;;
             ($'\b'|$'\x7f')
-                ztc[commander:cmd]=${ztc[commander:cmd]%?}
+                ztc[commander:input]=${ztc[commander:input]%?}
                 ;;
             ($'\n'|$'\r')
-                ztc:parse $ztc[commander:cmd]
-                ztc[commander:active]=0
-                ztc[commander:cmd]=""
+                ztc:parse $ztc[commander:input]
                 ;;
             (*)
-                ztc[commander:cmd]+=$_key
+                ztc[commander:input]+=$_key
                 ;;
         esac
 
@@ -277,15 +300,35 @@ function ztc:input { # detect user inputs + build commands
     else
         case $_key in
             (q|Q) ztc:clean ;;
-            (:)   ztc[commander:active]=1; ztc:cycle commander ;;
+            (:)   ztc:commander:enter ;;
         esac
     fi
 }
 
-function ztc:parse {
-case ${(L)1} in
-        (quit|exit) ztc:clean ;;
+function ztc:parse { # delegate command to correct parser
+    local _input=(${(As: :)1})
+    local _commands
+    ztc:unpack :commands _commands
+
+    case ${(L)_input[1]} in
+        (quit|exit)
+            ztc:clean
+            ;;
+        (*)
+            if (( _commands[(Ie)${(L)_input[1]}] )); then
+                ztc:parse:${(L)_input[1]} ${_input:1}
+                ztc:commander:exit
+            else
+                ztc:commander:exit "${ZTC_COLOR_REVERSE} Unknown command: ${(L)_input[1]} $ZTC_COLOR_RESET"
+            fi
+            ;;
     esac
+}
+
+function ztc:parse:date {
+
+    ztc:write $1; sleep 5; ztc:clean
+
 }
 
 
@@ -360,26 +403,27 @@ function ztc:add:commander {
     ztc[commander:overlay]=1
 
     ztc[commander:active]=${ztc[commander:active]:-0}
-    ztc[commander:cmd]=${ztc[commander:cmd]:-}
+    ztc[commander:status]=${ztc[commander:status]:-}
+    ztc[commander:input]=${ztc[commander:input]:-}
 
     ztc:set:commander
 }
 
 function ztc:set:commander {
     # import
-    local _cmd=$ztc[commander:cmd]
+    local _input=$ztc[commander:input]
 
     # truncate overflows
-    if (( ${#_cmd} >= ztc[commander:w] )); then _cmd=...${_cmd:$(( -ztc[commander:w] + 4 ))}; fi
+    if (( ${#_input} >= ztc[commander:w] )); then _input=...${_input:$(( -ztc[commander:w] + 4 ))}; fi
 
     # escape backslashes + export
-    if (( ztc[commander:active] )); then ztc[commander:data]=:${_cmd//\\/\\\\}$ZTC_CURSOR_SHOW; else ztc[commander:data]=$ZTC_CURSOR_HIDE; fi
+    if (( ztc[commander:active] )); then ztc[commander:data]=:${_input//\\/\\\\}$ZTC_CURSOR_SHOW; else ztc[commander:data]=$ztc[commander:status]$ZTC_CURSOR_HIDE; fi
 }
 
 
 ###### helpers
 
-function ztc:write { print -n ${(j::)@} } # render clock paints
+function ztc:write { print -n ${(j::)@} } # splash paint
 
 function ztc:pack   { ztc[$1]=${(Pj:@:)2} }           # (foo bar baz) -> ztc[key]="foo@bar@baz"
 function ztc:unpack { : ${(AP)2::=${(s:@:)ztc[$1]}} } # ztc[key]="foo@bar@baz" -> (foo bar baz)
@@ -432,17 +476,10 @@ function zsh_that_clock {
 
     typeset -A ztc=()
 
-    # config
-    ztc:plonk
-
-    # init
-    ztc:write $ZTC_INIT
-
-    # ztc
-    ztc:build && ztc:drive
-
-    # clean
-    ztc:clean
+    ztc:plonk              # set config + init
+    ztc:write $ZTC_INIT    # allocate space
+    ztc:build && ztc:drive # zsh the clock!
+    ztc:clean              # cleanup
 }
 
 zsh_that_clock
