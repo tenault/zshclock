@@ -294,6 +294,9 @@ function ztc:input { # detect user inputs + build commands
     # process input
 
     if (( ztc[commander:active] )); then # attach input to command bar
+        local _input=$ztc[commander:input]
+        local _cursor=$ztc[commander:cursor]
+
         case $_key in
             ($'\e') # detect special keys or exit
                 local _special
@@ -301,10 +304,10 @@ function ztc:input { # detect user inputs + build commands
 
                 case $_special in
                     ('[C') # <right>
-                        if (( ztc[commander:cursor] > 0 )); then (( ztc[commander:cursor]-- )); fi
+                        if (( _cursor > 0 )); then (( ztc[commander:cursor]-- )); fi
                         ;;
                     ('[D') # <left>
-                        if (( ztc[commander:cursor] - ${#ztc[commander:input]} < 0 )); then (( ztc[commander:cursor]++ )); fi
+                        if (( _cursor - ${#_input} < 0 )); then (( ztc[commander:cursor]++ )); fi
                         ;;
                     (*) ztc:commander:exit ;;
                 esac
@@ -314,23 +317,23 @@ function ztc:input { # detect user inputs + build commands
                 ztc[commander:cursor]=0
                 ;;
             ($'\x2') # <ctrl-b> (<left>)
-                if (( ztc[commander:cursor] - ${#ztc[commander:input]} < 0 )); then (( ztc[commander:cursor]++ )); fi
+                if (( _cursor - ${#_input} < 0 )); then (( ztc[commander:cursor]++ )); fi
                 ;;
             ($'\x6') # <ctrl-f> (<right>)
-                if (( ztc[commander:cursor] > 0 )); then (( ztc[commander:cursor]-- )); fi
+                if (( _cursor > 0 )); then (( ztc[commander:cursor]-- )); fi
                 ;;
             ($'\b'|$'\x7f'|$'\x8') # <backspace>/<delete>/<ctrl-h>
-                local _index=$(( ${#ztc[commander:input]} - ztc[commander:cursor] ))
-                ztc[commander:input]=${ztc[commander:input]:0:$(( _index - 1 ))}${ztc[commander:input]:_index}
+                local _index=$(( ${#_input} - _cursor ))
+                if (( ${#_input} > 0 )); then ztc[commander:input]=${_input:0:$(( _index - 1 ))}${_input:_index}; fi
                 ;;
             ($'\n'|$'\r') # <enter>
-                if (( ${#ztc[commander:input]} > 0 )); then ztc:parse $ztc[commander:input]; else ztc:commander:exit; fi
+                if (( ${#_input} > 0 )); then ztc:parse $_input; else ztc:commander:exit; fi
                 ;;
             ('') # ignore empty keys
                 ;;
             (*) # insert key at cursor index
-                local _index=$(( ${#ztc[commander:input]} - ztc[commander:cursor] ))
-                ztc[commander:input]=${ztc[commander:input]:0:_index}$_key${ztc[commander:input]:_index}
+                local _index=$(( ${#_input} - _cursor ))
+                ztc[commander:input]=${_input:0:_index}$_key${_input:_index}
                 ;;
         esac
 
