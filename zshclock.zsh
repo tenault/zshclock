@@ -19,7 +19,9 @@
 #   file, you can obtain one at https://mozilla.org/MPL/2.0
 
 
-###### constants
+# ┌───────────────────────────────┐
+# │ ░░▒▒▓▓██  CONSTANTS  ██▓▓▒▒░░ │
+# └───────────────────────────────┘
 
 ZTC_ESC="\x1b"
 ZTC_CSI=${ZTC_ESC}[
@@ -37,7 +39,10 @@ ZTC_CURSOR_HIDE=${ZTC_CSI}?25l
 ZTC_COLOR_RESET=${ZTC_CSI}0m
 ZTC_COLOR_REVERSE=${ZTC_CSI}7m
 
-###### ztc
+
+# ┌─────────────────────────┐
+# │ ░░▒▒▓▓██  ZTC  ██▓▓▒▒░░ │
+# └─────────────────────────┘
 
 function ztc:build { # set view area + build components
     ztc[vh]=$LINES
@@ -82,7 +87,9 @@ function ztc:clean { # dissolve clock + restore terminal state
 }
 
 
-###### plonk
+# ┌───────────────────────────┐
+# │ ░░▒▒▓▓██  PLONK  ██▓▓▒▒░░ │
+# └───────────────────────────┘
 
 function ztc:plonk { # set config settings + register commands and components
     ztc[:date]="%a %b %d %p"
@@ -98,7 +105,9 @@ function ztc:plonk { # set config settings + register commands and components
 }
 
 
-###### facades
+# ┌───────────────────────────────┐
+# │ ░░▒▒▓▓██  CASSETTES  ██▓▓▒▒░░ │
+# └───────────────────────────────┘
 
 function ztc:align { # check for resizes + rebuild
     LINES=
@@ -136,9 +145,13 @@ function ztc:commander:clear {
 }
 
 
-###### engines
+# ┌─────────────────────────────┐
+# │ ░░▒▒▓▓██  ENGINES  ██▓▓▒▒░░ │
+# └─────────────────────────────┘
 
-### painter
+# ┌┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┐
+#      painter
+# └┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┘
 
 function ztc:paint { # translate component data for rendering
 
@@ -157,8 +170,8 @@ function ztc:paint { # translate component data for rendering
 
     ztc[paint:my]=$ztc[vh] # min-y
     ztc[paint:mx]=$ztc[vw] # min-x
-    ztc[paint:ym]=0       # y-max
-    ztc[paint:xm]=0       # x-max
+    ztc[paint:ym]=0        # y-max
+    ztc[paint:xm]=0        # x-max
 
     ztc[paint:h]=0
     ztc[paint:w]=0
@@ -214,14 +227,14 @@ function ztc:paint { # translate component data for rendering
         esac
 
 
-        # save calculation + update bounds
+        # save calculations
 
         ztc[paint:${_name}:h]=$_h
         ztc[paint:${_name}:w]=$_w
         ztc[paint:${_name}:y]=$_y
         ztc[paint:${_name}:x]=$_x
 
-        if (( ! ztc[${_name}:overlay] )); then
+        if (( ! ztc[${_name}:overlay] )); then # update bounds
 
             (( ztc[paint:h] += $_h )) # only for layout:vertical when position:auto
 
@@ -280,8 +293,9 @@ function ztc:paint { # translate component data for rendering
     ztc:write $_clear ${(j::)_staged}
 }
 
-
-### commander
+# ┌┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┐
+#      commander
+# └┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┘
 
 function ztc:input { # detect user inputs + build commands
 
@@ -374,7 +388,13 @@ function ztc:parse:date {
 }
 
 
-###### components
+# ┌────────────────────────────────┐
+# │ ░░▒▒▓▓██  COMPONENTS  ██▓▓▒▒░░ │
+# └────────────────────────────────┘
+
+# ┌┄┄┄┄┄┄┄┄┄┄┄┄┄┐
+#      faces
+# └┄┄┄┄┄┄┄┄┄┄┄┄┄┘
 
 function ztc:add:face:default {
     ztc[face:default:y]=:auto
@@ -420,6 +440,10 @@ function ztc:set:face:default {
     ztc:pack face:default:data _staged
 }
 
+# ┌┄┄┄┄┄┄┄┄┄┄┄┄┐
+#      date
+# └┄┄┄┄┄┄┄┄┄┄┄┄┘
+
 function ztc:add:date {
     ztc[date:y]=:auto
     ztc[date:x]=:auto
@@ -435,6 +459,10 @@ function ztc:set:date {
 
     ztc[date:data]=$_date
 }
+
+# ┌┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┐
+#      commander
+# └┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┘
 
 function ztc:add:commander {
     ztc[commander:y]=$ztc[vh]
@@ -470,7 +498,9 @@ function ztc:set:commander {
 }
 
 
-###### helpers
+# ┌─────────────────────────────┐
+# │ ░░▒▒▓▓██  HELPERS  ██▓▓▒▒░░ │
+# └─────────────────────────────┘
 
 function ztc:write { print -n ${(j::)@} } # splash paint
 
@@ -516,7 +546,9 @@ function ztc:interleave { # ((1 1 1) (2 2 2) (3 3 3)) -> ((1 2 3) (1 2 3) (1 2 3
 }
 
 
-###### director
+# ┌──────────────────────────────┐
+# │ ░░▒▒▓▓██  DIRECTOR  ██▓▓▒▒░░ │
+# └──────────────────────────────┘
 
 function zsh_that_clock {
     trap 'ztc:clean 1' INT
