@@ -59,8 +59,8 @@ function ztc:drive { # run clock
         ztc:input # handle inputs
         ztc:align # check for resizes
 
-        # clear status
-        if [[ ztc[commander:status] != '' && ${$(( (EPOCHREALTIME - ztc[commander:epoch]) * 1000 ))%%.*} -gt ztc[:rate:status] ]]; then ztc[commander:status]=''; fi
+        # clear stale statuses
+        if [[ ztc[commander:status] != '' && ${$(( (EPOCHREALTIME - ztc[commander:epoch]) * 1000 ))%%.*} -gt ztc[:rate:status] ]]; then ztc:commander:clear; fi
 
         # repaint clock
         integer _duration=${$(( (EPOCHREALTIME - _epoch) * 1000 ))%%.*}
@@ -113,7 +113,7 @@ function ztc:cycle { # update component data + repaint
 
     for _name in $_components; do "ztc:set:$_name"; done
 
-    ztc:paint $1
+    ztc:paint $@
 }
 
 function ztc:commander:enter {
@@ -124,8 +124,15 @@ function ztc:commander:enter {
 function ztc:commander:exit {
     ztc[commander:status]=$1
     ztc[commander:epoch]=$EPOCHREALTIME
+
     ztc[commander:active]=0
     ztc[commander:input]=''
+    ztc[commander:cursor]=0
+}
+
+function ztc:commander:clear {
+    ztc[commander:status]=''
+    ztc:cycle commander
 }
 
 
@@ -249,7 +256,7 @@ function ztc:paint { # translate component data for rendering
     for _name in $_components; do
         local _data=$ztc[${_name}:data]
 
-        local _origin="${ZTC_CSI}${ztc[paint:${_name}:y]};${ztc[paint:${_name}:x]}H"
+        local _origin=${ztc[${_name}:origin]:-${ZTC_CSI}${ztc[paint:${_name}:y]};${ztc[paint:${_name}:x]}H}
 
         case $ztc[${_name}:data:format] in
             (masked)
@@ -277,30 +284,62 @@ function ztc:paint { # translate component data for rendering
 ### commander
 
 function ztc:input { # detect user inputs + build commands
+
+    # get input
+
     local _key
     read -s -t $(( ztc[:rate:input] / 1000.0 )) -k 1 _key
 
-    if (( ztc[commander:active] )); then
+
+    # process input
+
+    if (( ztc[commander:active] )); then # attach input to command bar
         case $_key in
-            ($'\e')
-                ztc:commander:exit
+            ($'\e') # detect special keys or exit
+                local _special
+                read -st -k 2 _special
+
+                case $_special in
+                    ('[C') # <right>
+                        if (( ztc[commander:cursor] > 0 )); then (( ztc[commander:cursor]-- )); fi
+                        ;;
+                    ('[D') # <left>
+                        if (( ztc[commander:cursor] - ${#ztc[commander:input]} < 0 )); then (( ztc[commander:cursor]++ )); fi
+                        ;;
+                    (*) ztc:commander:exit ;;
+                esac
                 ;;
-            ($'\b'|$'\x7f')
-                ztc[commander:input]=${ztc[commander:input]%?}
+            ($'\x15') # <ctrl-u> for line clearing
+                ztc[commander:input]=''
+                ztc[commander:cursor]=0
                 ;;
-            ($'\n'|$'\r')
-                ztc:parse $ztc[commander:input]
+            ($'\x2') # <ctrl-b> (<left>)
+                if (( ztc[commander:cursor] - ${#ztc[commander:input]} < 0 )); then (( ztc[commander:cursor]++ )); fi
                 ;;
-            (*)
-                ztc[commander:input]+=$_key
+            ($'\x6') # <ctrl-f> (<right>)
+                if (( ztc[commander:cursor] > 0 )); then (( ztc[commander:cursor]-- )); fi
+                ;;
+            ($'\b'|$'\x7f'|$'\x8') # <backspace>/<delete>/<ctrl-h>
+                local _index=$(( ${#ztc[commander:input]} - ztc[commander:cursor] ))
+                ztc[commander:input]=${ztc[commander:input]:0:$(( _index - 1 ))}${ztc[commander:input]:_index}
+                ;;
+            ($'\n'|$'\r') # <enter>
+                if (( ${#ztc[commander:input]} > 0 )); then ztc:parse $ztc[commander:input]; else ztc:commander:exit; fi
+                ;;
+            ('') # ignore empty keys
+                ;;
+            (*) # insert key at cursor index
+                local _index=$(( ${#ztc[commander:input]} - ztc[commander:cursor] ))
+                ztc[commander:input]=${ztc[commander:input]:0:_index}$_key${ztc[commander:input]:_index}
                 ;;
         esac
 
         ztc:cycle commander
-    else
+    else # input is a shortcut
         case $_key in
-            (q|Q) ztc:clean ;;
-            (:)   ztc:commander:enter ;;
+            ($'\e')         ztc:commander:clear ;;
+            (q|Q)           ztc:clean ;;
+            (:|$'\n'|$'\r') ztc:commander:enter ;;
         esac
     fi
 }
@@ -311,7 +350,7 @@ function ztc:parse { # delegate command to correct parser
     ztc:unpack :commands _commands
 
     case ${(L)_input[1]} in
-        (quit|exit)
+        (q|quit|exit)
             ztc:clean
             ;;
         (*)
@@ -345,7 +384,7 @@ function ztc:add:face:default {
 
 function ztc:set:face:default {
     local _time
-    strftime -s _time "%l:%M"
+    strftime -s _time "%l:%M:%S"
 
     local _mask=()
     local _staged=()
@@ -406,6 +445,8 @@ function ztc:add:commander {
     ztc[commander:status]=${ztc[commander:status]:-}
     ztc[commander:input]=${ztc[commander:input]:-}
 
+    ztc[commander:cursor]=${ztc[commander:cursor]:-0}
+
     ztc:set:commander
 }
 
@@ -416,8 +457,13 @@ function ztc:set:commander {
     # truncate overflows
     if (( ${#_input} >= ztc[commander:w] )); then _input=...${_input:$(( -ztc[commander:w] + 4 ))}; fi
 
+    # position cursor
+    local _cursor
+    if (( ztc[commander:cursor] > 0 )); then _cursor="$ZTC_CSI${ztc[commander:cursor]}D";fi
+
     # escape backslashes + export
-    if (( ztc[commander:active] )); then ztc[commander:data]=:${_input//\\/\\\\}$ZTC_CURSOR_SHOW; else ztc[commander:data]=$ztc[commander:status]$ZTC_CURSOR_HIDE; fi
+    if (( ztc[commander:active] )); then ztc[commander:data]=:${_input//\\/\\\\}$_cursor$ZTC_CURSOR_SHOW
+    else ztc[commander:data]=$ztc[commander:status]$ZTC_CURSOR_HIDE; fi
 }
 
 
