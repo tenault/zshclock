@@ -52,9 +52,8 @@ function ztc:build { # set view area + build components
     ztc:steal components _components
 
     for _name in $_components; do "ztc:order:$_name"; done
-    for _name in $_components; do "ztc:alter:$_name"; done
 
-    ztc:paint
+    ztc:cycle
 }
 
 function ztc:drive { # clock go vroom vroom
@@ -93,7 +92,7 @@ function ztc:clean { # dissolve clock + restore terminal state
 # └───────────────────────────┘
 
 function ztc:plonk { # set config settings + register commands and components
-    ztc[:date]="%a %b %d %p"
+    ztc[:date:format]="%a %b %d %p"
     ztc[:rate:input]=50
     ztc[:rate:refresh]=1000
     ztc[:rate:status]=5000
@@ -163,15 +162,10 @@ function ztc:commander:clear {
 
 function ztc:paint { # translate component data for rendering
 
-    local _clear=$ZTC_CLEAR
+    local _components
+    ztc:steal components _components
 
-    local _components=$@
-
-    if (( $# == 0 )); then
-        ztc:steal components _components
-    else
-        _clear=$ZTC_CLEAR_LINE # find a way to make this clear window only, or skip
-    fi
+    local _touch=(${@:-$_components})
 
 
     # ───── reset bounds ─────
@@ -185,7 +179,7 @@ function ztc:paint { # translate component data for rendering
     ztc[paint:w]=0
 
 
-    # ───── get component properties ─────
+    # ───── get component properties + cache ─────
 
     for _name in $_components; do
 
@@ -199,50 +193,60 @@ function ztc:paint { # translate component data for rendering
         local _data=()
         ztc:steal ${_name}:data _data
 
+        if (( _touch[(Ie)$_name] )); then # calculate component space
 
-        # ╶╶╶╶╶ determine component space ╴╴╴╴╴
+            # ╶╶╶╶╶ determine component space ╴╴╴╴╴
 
-        case $ztc[${_name}:h] in
-            (:auto) # set height to number of lines
-                _h=${#_data} ;;
-            (*)
-                _h=$ztc[${_name}:h] ;;
-        esac
+            case $ztc[${_name}:h] in
+                (:auto) # set height to number of lines
+                    _h=${#_data} ;;
+                (*)
+                    _h=$ztc[${_name}:h] ;;
+            esac
 
-        case $ztc[${_name}:w] in
-            (:auto) # set width to length of longest line
-                local _length=0
-                for _line in $_data; do if (( ${#_line} > _length )); then _length=${#_line}; fi; done
-                _w=$_length
-                ;;
-            (*)
-                _w=$ztc[${_name}:w]
-                ;;
-        esac
+            case $ztc[${_name}:w] in
+                (:auto) # set width to length of longest line
+                    local _length=0
+                    for _line in $_data; do if (( ${#_line} > _length )); then _length=${#_line}; fi; done
+                    _w=$_length
+                    ;;
+                (*)
+                    _w=$ztc[${_name}:w]
+                    ;;
+            esac
 
-        case $ztc[${_name}:y] in
-            (:auto) # center component vertically
-                _y=$(( ( (ztc[vh] - _h) / 2 ) + 1 )) ;;
-            (*)
-                _y=$ztc[${_name}:y] ;;
-        esac
+            case $ztc[${_name}:y] in
+                (:auto) # center component vertically
+                    _y=$(( ( (ztc[vh] - _h) / 2 ) + 1 )) ;;
+                (*)
+                    _y=$ztc[${_name}:y] ;;
+            esac
 
-        case $ztc[${_name}:x] in
-            (:auto) # center component horizontally
-                _x=$(( ( (ztc[vw] - _w) / 2 ) + 1 )) ;;
-            (*)
-                _x=$ztc[${_name}:x] ;;
-        esac
+            case $ztc[${_name}:x] in
+                (:auto) # center component horizontally
+                    _x=$(( ( (ztc[vw] - _w) / 2 ) + 1 )) ;;
+                (*)
+                    _x=$ztc[${_name}:x] ;;
+            esac
 
 
-        # ╶╶╶╶╶ save calculations ╴╴╴╴╴
+            # ╶╶╶╶╶ save/cache calculations ╴╴╴╴╴
 
-        ztc[paint:${_name}:h]=$_h
-        ztc[paint:${_name}:w]=$_w
-        ztc[paint:${_name}:y]=$_y
-        ztc[paint:${_name}:x]=$_x
+            ztc[paint:${_name}:h]=$_h
+            ztc[paint:${_name}:w]=$_w
+            ztc[paint:${_name}:y]=$_y
+            ztc[paint:${_name}:x]=$_x
 
-        ztc:stash paint:${_name}:data _data
+            ztc:stash paint:${_name}:data _data
+
+        else # retrieve from cache
+
+            _h=$ztc[paint:${_name}:h]
+            _w=$ztc[paint:${_name}:w]
+            _y=$ztc[paint:${_name}:y]
+            _x=$ztc[paint:${_name}:x]
+
+        fi
 
 
         # ╶╶╶╶╶ update bounds ╴╴╴╴╴
@@ -280,8 +284,7 @@ function ztc:paint { # translate component data for rendering
     local _staged=()
 
     for _name in $_components; do
-        local _content=$ztc[paint:${_name}:data]
-
+        local _matter=$ztc[paint:${_name}:data]
         local _origin="${ZTC_CSI}${ztc[paint:${_name}:y]};${ztc[paint:${_name}:x]}H"
 
         case $ztc[${_name}:data:format] in
@@ -289,20 +292,20 @@ function ztc:paint { # translate component data for rendering
                 clear="${ZTC_COLOR_RESET} "
                 active="${ZTC_COLOR_REVERSE} "
 
-                _content=${_content//1/$active}
-                _content=${_content//0/$clear}
+                _matter=${_matter//1/$active}
+                _matter=${_matter//0/$clear}
 
-                _content="$_content$ZTC_COLOR_RESET"
+                _matter="$_matter$ZTC_COLOR_RESET"
                 ;;
         esac
 
-        _staged+=($_origin ${_content//@/${ZTC_CSI}E${ZTC_CSI}$(( ztc[paint:${_name}:x] - 1 ))C})
+        _staged+=($_origin ${_matter//@/${ZTC_CSI}E${ZTC_CSI}$(( ztc[paint:${_name}:x] - 1 ))C})
     done
 
 
     # ───── render ─────
 
-    ztc:write $_clear ${(j::)_staged}
+    ztc:write $ZTC_CLEAR ${(j::)_staged}
 }
 
 
@@ -390,40 +393,44 @@ function ztc:input { # detect user inputs + build commands
 
         ztc:cycle commander
 
-    # ╶╶╶╶╶ input is a shortcut ╴╴╴╴╴
-    else
+
+    else # input is a shortcut
+
         case $_key in
             ($'\e')         ztc:commander:clear ;;
             (q|Q)           ztc:clean ;;
             (:|$'\n'|$'\r') ztc:commander:enter ;;
         esac
+
     fi
 }
 
 function ztc:parse { # delegate command to correct parser
     local _input=(${(As: :)1})
+    local _command=${(L)_input[1]//\\/\\\\}
+
     local _commands
     ztc:steal :commands _commands
 
-    case ${(L)_input[1]} in
+    case $_command in
         (q|quit|exit)
             ztc:clean
             ;;
         (*)
-            if (( _commands[(Ie)${(L)_input[1]}] )); then
-                ztc:parse:${(L)_input[1]} ${_input:1}
+            if (( _commands[(Ie)$_command] )); then
+                ztc:parse:$_command ${_input:1}
                 ztc:commander:leave
             else
-                ztc:commander:leave "${ZTC_COLOR_REVERSE} Unknown command: ${(L)_input[1]} $ZTC_COLOR_RESET"
+                ztc:commander:leave "$ZTC_COLOR_REVERSE Unknown command: $_command $ZTC_COLOR_RESET"
             fi
             ;;
     esac
 }
 
 function ztc:parse:date {
-
-    ztc:write $1; sleep 5; ztc:clean
-
+    local _format=${(j: :)@}
+    ztc[:date:format]=${_format:-"%a %b %d %p"}
+    ztc:cycle date
 }
 
 
@@ -471,7 +478,7 @@ function ztc:alter:face:default {
         _staged+=(${(j:@:)_mask})
     done
 
-    # interleave+flatten and insert padding
+    # interleave + flatten and insert padding
     ztc:weave _staged
     for _i in {1..${#_staged}}; do _staged[$_i]=${_staged[$_i]//@/0}; done
 
@@ -495,9 +502,9 @@ function ztc:order:date {
 
 function ztc:alter:date {
     local _date
-    strftime -s _date $ztc[:date]
+    strftime -s _date $ztc[:date:format]
 
-    ztc[date:data]=$_date
+    ztc[date:data]=${_date//\\/\\\\}
 }
 
 
@@ -516,7 +523,7 @@ function ztc:order:commander {
     ztc[commander:overlay]=1
     ztc[commander:cursor]=${ztc[commander:cursor]:-0}
 
-    # commander-unique properties
+    # commander properties
     ztc[commander:input]=${ztc[commander:input]:-}
 
     ztc[commander:active]=${ztc[commander:active]:-0}
