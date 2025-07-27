@@ -300,7 +300,15 @@ function ztc:paint { # translate component data for rendering
                 ;;
         esac
 
-        _staged+=($_origin ${_matter//@/${ZTC_CSI}E${ZTC_CSI}$(( ztc[paint:${_name}:x] - 1 ))C})
+        local _deleteme=''
+
+        if [[ $ztc[${_name}:data:format] != 'raw' ]]; then
+            _deleteme=${_matter//@n/${ZTC_CSI}E${ZTC_CSI}$(( ztc[paint:${_name}:x] - 1 ))C}
+        else
+            _deleteme=$_matter
+        fi
+
+        _staged+=($_origin $_deleteme)
     done
 
 
@@ -444,7 +452,9 @@ function ztc:flare { # expand `@` flares
     local _input=(${(AP)1})
     local _flare=()
 
-    : ${(AP)2::=$_data}
+    : ${(AP)2::=$_input}
+
+    # make sure @(n) -> @n
 
 }
 
@@ -465,6 +475,8 @@ function ztc:order:face:default {
     ztc[face:default:x]=:auto
     ztc[face:default:h]=:auto
     ztc[face:default:w]=:auto
+
+    ztc[face:default:data:format]=masked
 }
 
 function ztc:alter:face:default {
@@ -490,15 +502,14 @@ function ztc:alter:face:default {
             (:) _mask=(  0   1   0   1   0) ;;
         esac
 
-        _staged+=(${(j:@:)_mask})
+        _staged+=(${(j:@n:)_mask})
     done
 
     # interleave + flatten and insert padding
     ztc:weave _staged
-    for _i in {1..${#_staged}}; do _staged[$_i]=${_staged[$_i]//@/0}; done
+    for _i in {1..${#_staged}}; do _staged[$_i]=${_staged[$_i]//@n/0}; done
 
     # save
-    ztc[face:default:data:format]=masked
     ztc:stash face:default:data _staged
 }
 
@@ -517,7 +528,7 @@ function ztc:order:date {
 
 function ztc:alter:date {
     local _date
-    strftime -s _date $ztc[:date:format]
+    strftime -s _date ${ztc[:date:format]//\%n/@n} # capture newlines
 
     ztc[date:data]=$_date
 }
@@ -536,10 +547,11 @@ function ztc:order:commander {
 
     # extended component properties
     ztc[commander:overlay]=1
-    ztc[commander:cursor]=${ztc[commander:cursor]:-0}
+    ztc[commander:data:format]=raw
 
     # commander properties
     ztc[commander:input]=${ztc[commander:input]:-}
+    ztc[commander:cursor]=${ztc[commander:cursor]:-0}
 
     ztc[commander:active]=${ztc[commander:active]:-0}
     ztc[commander:status]=${ztc[commander:status]:-}
@@ -603,8 +615,8 @@ function ztc:alter:commander {
 
 function ztc:write { print -n ${(j::)@} } # splash paint
 
-function ztc:stash { ztc[$1]=${(Pj:@:)2} }           # (foo bar baz) -> ztc[key]="foo@bar@baz"
-function ztc:steal { : ${(AP)2::=${(s:@:)ztc[$1]}} } # ztc[key]="foo@bar@baz" -> (foo bar baz)
+function ztc:stash { ztc[$1]=${(Pj:@n:)2} }           # (foo bar baz) -> ztc[key]="foo@nbar@nbaz"
+function ztc:steal { : ${(AP)2::=${(s:@n:)ztc[$1]}} } # ztc[key]="foo@nbar@nbaz" -> (foo bar baz)
 
 function ztc:weave { # ((1 1 1) (2 2 2) (3 3 3)) -> ((1 2 3) (1 2 3) (1 2 3))
 
@@ -618,7 +630,7 @@ function ztc:weave { # ((1 1 1) (2 2 2) (3 3 3)) -> ((1 2 3) (1 2 3) (1 2 3))
     local _length=0
 
     for _item in $_array; do
-        local _sub=(${(As:@:)_item})
+        local _sub=(${(As:@n:)_item})
         if (( $#_sub > _length )); then _length=${#_sub}; fi
     done
 
@@ -631,11 +643,11 @@ function ztc:weave { # ((1 1 1) (2 2 2) (3 3 3)) -> ((1 2 3) (1 2 3) (1 2 3))
         local _select=()
 
         for _item in $_array; do
-            local _sub=(${(As:@:)_item})
+            local _sub=(${(As:@n:)_item})
             _select+=($_sub[$_i])
         done
 
-        _weaved+=(${(j:@:)_select})
+        _weaved+=(${(j:@n:)_select})
     done
 
 
