@@ -48,7 +48,7 @@ function ztc:build { # set view area + build components
     ztc[vh]=$LINES
     ztc[vw]=$COLUMNS
 
-    local _components
+    local _components=()
     ztc:steal components _components
 
     for _name in $_components; do "ztc:order:$_name"; done
@@ -162,7 +162,7 @@ function ztc:commander:clear {
 
 function ztc:paint { # translate component data for rendering
 
-    local _components
+    local _components=()
     ztc:steal components _components
 
     local _touch=(${@:-$_components})
@@ -183,23 +183,25 @@ function ztc:paint { # translate component data for rendering
 
     for _name in $_components; do
 
-        # ╶╶╶╶╶ steal component data ╴╴╴╴╴
+        integer _y=0
+        integer _x=0
+        integer _h=0
+        integer _w=0
 
-        integer _y
-        integer _x
-        integer _h
-        integer _w
+        if (( _touch[(Ie)$_name] )); then # flare data + calculate dimensions
 
-        local _data=()
-        ztc:steal ${_name}:data _data
+            local _data=()
+            ztc:steal ${_name}:data _data
 
-        if (( _touch[(Ie)$_name] )); then # calculate component space
+            local _flared=()
+            ztc:flare _data _flared
+
 
             # ╶╶╶╶╶ determine component space ╴╴╴╴╴
 
             case $ztc[${_name}:h] in
                 (:auto) # set height to number of lines
-                    _h=${#_data} ;;
+                    _h=${#_flared} ;;
                 (*)
                     _h=$ztc[${_name}:h] ;;
             esac
@@ -207,7 +209,7 @@ function ztc:paint { # translate component data for rendering
             case $ztc[${_name}:w] in
                 (:auto) # set width to length of longest line
                     local _length=0
-                    for _line in $_data; do if (( ${#_line} > _length )); then _length=${#_line}; fi; done
+                    for _line in $_flared; do if (( ${#_line} > _length )); then _length=${#_line}; fi; done
                     _w=$_length
                     ;;
                 (*)
@@ -237,7 +239,7 @@ function ztc:paint { # translate component data for rendering
             ztc[paint:${_name}:y]=$_y
             ztc[paint:${_name}:x]=$_x
 
-            ztc:stash paint:${_name}:data _data
+            ztc:stash paint:${_name}:data _flared
 
         else # retrieve from cache
 
@@ -252,7 +254,6 @@ function ztc:paint { # translate component data for rendering
         # ╶╶╶╶╶ update bounds ╴╴╴╴╴
 
         if (( ! ztc[${_name}:overlay] )); then
-
             (( ztc[paint:h] += $_h )) # only for layout:vertical when position:auto
 
             if (( _y + _h > ztc[paint:ym] )); then ztc[paint:ym]=$((_y + _h)); fi
@@ -317,7 +318,7 @@ function ztc:input { # detect user inputs + build commands
 
     # ───── read input ─────
 
-    local _key
+    local _key=''
     read -s -t $(( ztc[:rate:input] / 1000.0 )) -k 1 _key
 
 
@@ -332,7 +333,7 @@ function ztc:input { # detect user inputs + build commands
             # ╶╶╶╶╶ <esc> + arrow keys ╴╴╴╴╴
 
             ($'\e')
-                local _special
+                local _special=''
                 read -st -k 2 _special
 
                 case $_special in
@@ -409,7 +410,7 @@ function ztc:parse { # delegate command to correct parser
     local _input=(${(As: :)1})
     local _command=${(L)_input[1]//\\/\\\\}
 
-    local _commands
+    local _commands=()
     ztc:steal :commands _commands
 
     case $_command in
@@ -431,6 +432,20 @@ function ztc:parse:date {
     local _format=${(j: :)@}
     ztc[:date:format]=${_format:-"%a %b %d %p"}
     ztc:cycle date
+}
+
+
+# ┌───────────────┐
+# │    flaring    │
+# └───────────────┘
+
+function ztc:flare { # expand `@` flares
+
+    local _input=(${(AP)1})
+    local _flare=()
+
+    : ${(AP)2::=$_data}
+
 }
 
 
@@ -504,7 +519,7 @@ function ztc:alter:date {
     local _date
     strftime -s _date $ztc[:date:format]
 
-    ztc[date:data]=${_date//\\/\\\\}
+    ztc[date:data]=$_date
 }
 
 
@@ -577,7 +592,7 @@ function ztc:alter:commander {
 
     # ───── export ─────
 
-    if (( ztc[commander:active] )); then ztc[commander:data]=${ztc[commander:prefix]}${_input//\\/\\\\}$_position$ZTC_CURSOR_SHOW
+    if (( ztc[commander:active] )); then ztc[commander:data]=${ztc[commander:prefix]}$_input$_position$ZTC_CURSOR_SHOW
     else ztc[commander:data]=$ztc[commander:status]$ZTC_CURSOR_HIDE; fi
 }
 
