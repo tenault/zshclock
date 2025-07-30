@@ -46,7 +46,7 @@ ZTC_CURSOR_HIDE=${ZTC_CSI}?25l
 
 ZTC_TEXT_RESET=${ZTC_CSI}0m
 ZTC_TEXT_BOLD=${ZTC_CSI}1m
-ZTC_TEXT_REVERSE=${ZTC_CSI}7m
+ZTC_TEXT_INVERT=${ZTC_CSI}7m
 
 
 # ┌─────────────────────────┐
@@ -100,19 +100,65 @@ function ztc:clean { # dissolve clock + restore terminal state
 # │ ░░▒▒▓▓██  PLONK  ██▓▓▒▒░░ │
 # └───────────────────────────┘
 
-function ztc:plonk { # set config settings + register commands and components
-ztc[:date:format]="that @bold old man @reset is bold" # "%a %b %d %p"
+function ztc:plonk { # set config settings + register parts
+
+    # ───── set defaults ─────
+
+    ztc[:date:format]="%a %b %d %p"
     ztc[:rate:input]=50
     ztc[:rate:refresh]=1000
     ztc[:rate:status]=5000
 
-    local _flares=(reset bold reverse invert)
+
+    # ───── register flares ─────
+
+    local -U _flares=(newline reset bold invert)
+    local -A _guide=()
+
+    # ╶╶╶╶╶ generate short flares ╴╴╴╴╴
+
+    local -A _route=()
+
+    for _i in {1..${#_flares}}; do
+        local _length=${#_flares[$_i]}
+        _route[$_length]="$_route[$_length]@$_flares[$_i]"
+
+        for _j in {1..$_length}; do
+            local _abbr=${_flares[$_i]:0:$_j}
+
+            if (( ! _flares[(Ie)$_abbr] )); then
+                _flares+=($_abbr)
+                _guide[$_abbr]=$_flares[$_i]
+                _route[$_j]="$_route[$_j]@$_abbr"
+                break
+            fi
+        done
+    done
+
+    # ╶╶╶╶╶ flatten guide ╴╴╴╴╴
+
+    local -U _flat=()
+    for _key _value in ${(kv)_guide}; do _flat+=("$_key#$_value"); done
+
+    ztc:stash flares:guide _flat
+
+    # ╶╶╶╶╶ rebuild flare array + sort descending ╴╴╴╴╴
+
+    _flares=()
+    for _key in ${(Ok)_route}; do _flares+=(${(As:@:)_route[$_key]}); done
+
     ztc:stash flares _flares
 
-    local _commands=(date)
+
+    # ───── register commands ─────
+
+    local -U _commands=(date)
     ztc:stash :commands _commands
 
-    local _components=( date )
+
+    # ───── register components ─────
+
+    local -U _components=(face:digital date commander)
     ztc:stash components _components
 }
 
@@ -131,10 +177,10 @@ function ztc:align { # check for resizes + rebuild
 }
 
 function ztc:cycle { # update component data + repaint
-    local _components=$@
+    local -U _components=$@
     if (( $# == 0 )); then ztc:steal components _components; fi
 
-    for _name in $_components; do "ztc:alter:$_name"; done
+    for _name in $_components; do ztc:alter:$_name; done
 
     ztc:paint $@
 }
@@ -168,55 +214,16 @@ function ztc:commander:clear {
 # │ ░░▒▒▓▓██  ENGINES  ██▓▓▒▒░░ │
 # └─────────────────────────────┘
 
-# ┌─────────────┐
-# │    flare    │
-# └─────────────┘
-
-
-function ztc:flare { # expand `@` flares
-    local _input=(${(AP)1})
-
-    local _flares
-    ztc:steal flares _flares
-
-    _input=${_input// @reset /@reset } # problem: @b @r @b @r @b @r -> @b@r @b@r @b@r (spaces lost)
-
-    for _flare in $_flares; do
-        _input=${_input// @$_flare / @\($_flare\)}
-
-        ztc:write $ZTC_CLEAR_LINE $ZTC_CURSOR_HOME "$_flare :: " $_input; read -s -k 1 foo
-
-        case $_flare in
-            (reset)
-                _input=${_input//@$_flare/$ZTC_TEXT_RESET}
-                ;;
-            (bold)
-                _input=${_input//@\($_flare\)/$ZTC_TEXT_BOLD}
-                ;;
-            (reverse|invert)
-                _input=${_input//@\($_flare\)/$ZTC_TEXT_REVERSE}
-        esac
-
-        ztc:write $ZTC_CLEAR_LINE $ZTC_CURSOR_HOME "$_flare :: " $_input; read -s -k 1 foo
-
-        if [[ ! $_input =~ @ ]]; then break; fi # skip flaring if no more flares
-
-    done
-
-    : ${(AP)2::=$_input}
-}
-
-
 # ┌───────────────┐
 # │    painter    │
 # └───────────────┘
 
 function ztc:paint { # translate component data for rendering
 
-    local _components=()
+    local -U _components=()
     ztc:steal components _components
 
-    local _touch=(${@:-$_components})
+    local -U _touch=(${@:-$_components})
 
 
     # ───── reset bounds ─────
@@ -244,11 +251,22 @@ function ztc:paint { # translate component data for rendering
             local _data=()
             ztc:steal ${_name}:data _data
 
+            # ╶╶╶╶╶ translate data mask ╴╴╴╴╴
+
+            if [[ $ztc[${_name}:data:format] == 'masked' ]]; then
+                local -U _key=()
+                ztc:steal ${_name}:data:key _key
+
+                for _k in $_key; do
+                    local _entry=(${(As:#:)_k})
+                    for _i in {1..${#_data}}; do _data[$_i]=${_data[$_i]//$_entry[1]/$_entry[2]}; done
+                done
+            fi
+
             local _flared=()
             ztc:flare _data _flared
 
-
-            # ╶╶╶╶╶ determine component space ╴╴╴╴╴
+            # ╶╶╶╶╶ component height ╴╴╴╴╴
 
             case $ztc[${_name}:h] in
                 (:auto) # set height to number of lines
@@ -257,16 +275,28 @@ function ztc:paint { # translate component data for rendering
                     _h=$ztc[${_name}:h] ;;
             esac
 
+            # ╶╶╶╶╶ component width ╴╴╴╴╴
+
             case $ztc[${_name}:w] in
                 (:auto) # set width to length of longest line
                     local _length=0
-                    for _line in $_flared; do if (( ${#_line} > _length )); then _length=${#_line}; fi; done
+
+                    for _line in $_flared; do
+                        # strip escapes
+                        _line=${_line//@\(@\)/@}
+                        _line=${(S)_line//${ZTC_CSI}*(m|H|K|J|A|B|C|D|E|F|G|S|T|f|i|n|h|l|s|u)}
+
+                        if (( ${#_line} > _length )); then _length=${#_line}; fi
+                    done
+
                     _w=$_length
                     ;;
                 (*)
                     _w=$ztc[${_name}:w]
                     ;;
             esac
+
+            # ╶╶╶╶╶ component y-origin ╴╴╴╴╴
 
             case $ztc[${_name}:y] in
                 (:auto) # center component vertically
@@ -275,13 +305,14 @@ function ztc:paint { # translate component data for rendering
                     _y=$ztc[${_name}:y] ;;
             esac
 
+            # ╶╶╶╶╶ component x-origin ╴╴╴╴╴
+
             case $ztc[${_name}:x] in
                 (:auto) # center component horizontally
                     _x=$(( ( (ztc[vw] - _w) / 2 ) + 1 )) ;;
                 (*)
                     _x=$ztc[${_name}:x] ;;
             esac
-
 
             # ╶╶╶╶╶ save/cache calculations ╴╴╴╴╴
 
@@ -300,7 +331,6 @@ function ztc:paint { # translate component data for rendering
             _x=$ztc[paint:${_name}:x]
 
         fi
-
 
         # ╶╶╶╶╶ update bounds ╴╴╴╴╴
 
@@ -336,32 +366,74 @@ function ztc:paint { # translate component data for rendering
     local _staged=()
 
     for _name in $_components; do
-        local _matter=$ztc[paint:${_name}:data]
+        local _matter=${ztc[paint:${_name}:data]//@@/@\(@\)}
         local _origin="${ZTC_CSI}${ztc[paint:${_name}:y]};${ztc[paint:${_name}:x]}H"
 
-        case $ztc[${_name}:data:format] in
-            (masked)
-                clear="${ZTC_TEXT_RESET} "
-                active="${ZTC_TEXT_REVERSE} "
-
-                _matter=${_matter//1/$active}
-                _matter=${_matter//0/$clear}
-
-                _matter="$_matter$ZTC_TEXT_RESET"
-                ;;
-        esac
-
-        if [[ $ztc[${_name}:data:format] != 'raw' ]]; then _matter=${_matter//@n/${ZTC_CSI}E${ZTC_CSI}$(( ztc[paint:${_name}:x] - 1 ))C}; fi
-
-        _staged+=($_origin $_matter)
+        _matter=${_matter//@n/${ZTC_CSI}E${ZTC_CSI}$(( ztc[paint:${_name}:x] - 1 ))C}
+        _staged+=($_origin ${_matter//@\(@\)/@} $ZTC_TEXT_RESET)
     done
 
 
     # ───── render ─────
 
     ztc:write $ZTC_CLEAR ${(j::)_staged}
-    read -s -k 1 bar; ztc:clean
 }
+
+# ┌╴╴╴╴╴╴╴╴╴╴╴╴╴╴╴┐
+# ╎    flaring    ╎
+# └╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶┘
+
+function ztc:flare { # expand `@` flares + calc width
+
+    # ───── import + setup ─────
+
+    local _input=${(Pj:@n:)1//@@/@\(@\)} # escape `@@`
+
+    local _flares=()
+    ztc:steal flares _flares
+
+    # ╶╶╶╶╶ retrieve guide ╴╴╴╴╴
+
+    local -U _flat=()
+    local -A _guide=()
+    ztc:steal flares:guide _flat
+
+    for _item in $_flat; do
+        local -U _entry=(${(As:#:)_item})
+        _guide[$_entry[1]]=$_entry[2]
+    done
+
+
+    # ───── delegate flare to correct expander ─────
+
+    for _flare in $_flares; do
+
+        # ╶╶╶╶╶ skip flaring if out of flares ╴╴╴╴╴
+
+        if [[ ! $_input =~ @ ]]; then break; fi
+
+        # ╶╶╶╶╶ link alias ╴╴╴╴╴
+
+        local _alias=$_flare
+        if (( ${${(k)_guide}[(Ie)$_flare]} )); then _alias=$_guide[$_flare]; fi
+
+        # ╶╶╶╶╶ wrap flare + expand ╴╴╴╴╴
+
+        _input=${_input//@$_flare/@\($_flare\)}
+        ztc:flare:$_alias _input $_flare
+
+    done
+
+
+    # ───── export ─────
+
+    : ${(AP)2::=${(s:@n:)_input}}
+}
+
+function ztc:flare:newline   { : ${(P)1::=${(P)1//@\($2\)/@n}}               }
+function ztc:flare:reset     { : ${(P)1::=${(P)1//@\($2\)/$ZTC_TEXT_RESET}}  }
+function ztc:flare:bold      { : ${(P)1::=${(P)1//@\($2\)/$ZTC_TEXT_BOLD}}   }
+function ztc:flare:invert    { : ${(P)1::=${(P)1//@\($2\)/$ZTC_TEXT_INVERT}} }
 
 
 # ┌─────────────────┐
@@ -380,7 +452,7 @@ function ztc:input { # detect user inputs + build commands
 
     if (( ztc[commander:active] )); then # attach input to command bar
         local _input=$ztc[commander:input]
-        local _cursor=$ztc[commander:cursor]
+        integer _cursor=$ztc[commander:cursor]
 
         case $_key in
 
@@ -424,7 +496,7 @@ function ztc:input { # detect user inputs + build commands
             # ╶╶╶╶╶ <backspace>/<delete>/<ctrl-h> ╴╴╴╴╴
 
             ($'\b'|$'\x7f'|$'\x8')
-                local _index=$(( ${#_input} - _cursor ))
+                integer _index=$(( ${#_input} - _cursor ))
                 if (( _index != 0 )); then ztc[commander:input]=${_input:0:$(( _index - 1 ))}${_input:_index}; fi
                 ;;
 
@@ -441,7 +513,7 @@ function ztc:input { # detect user inputs + build commands
             # ╶╶╶╶╶ insert key at cursor index ╴╴╴╴╴
 
             (*)
-                local _index=$(( ${#_input} - _cursor ))
+                integer _index=$(( ${#_input} - _cursor ))
                 ztc[commander:input]=${_input:0:_index}$_key${_input:_index}
                 ;;
         esac
@@ -460,11 +532,15 @@ function ztc:input { # detect user inputs + build commands
     fi
 }
 
+# ┌╴╴╴╴╴╴╴╴╴╴╴╴╴╴╴┐
+# ╎    parsing    ╎
+# └╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶┘
+
 function ztc:parse { # delegate command to correct parser
     local _input=(${(As: :)1})
     local _command=${(L)_input[1]//\\/\\\\}
 
-    local _commands=()
+    local -U _commands=()
     ztc:steal :commands _commands
 
     case $_command in
@@ -476,7 +552,7 @@ function ztc:parse { # delegate command to correct parser
                 ztc:parse:$_command ${_input:1}
                 ztc:commander:leave
             else
-                ztc:commander:leave "$ZTC_TEXT_REVERSE Unknown command: $_command $ZTC_TEXT_RESET"
+                ztc:commander:leave "@i Unknown command: ${_command//@/@@} @r"
             fi
             ;;
     esac
@@ -497,26 +573,29 @@ function ztc:parse:date {
 # │    faces    │
 # └─────────────┘
 
-# ───── default digital ─────
+# ┌╴╴╴╴╴╴╴╴╴╴╴╴╴╴╴┐
+# ╎    digital    ╎
+# └╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶┘
 
-function ztc:order:face:default {
-    # space declaration
-    ztc[face:default:y]=:auto
-    ztc[face:default:x]=:auto
-    ztc[face:default:h]=:auto
-    ztc[face:default:w]=:auto
+function ztc:order:face:digital {
+    ztc[face:digital:y]=:auto
+    ztc[face:digital:x]=:auto
+    ztc[face:digital:h]=:auto
+    ztc[face:digital:w]=:auto
 
-    ztc[face:default:data:format]=masked
+    ztc[face:digital:data:format]=masked
 }
 
-function ztc:alter:face:default {
-    local _time
+function ztc:alter:face:digital {
+    local _time=''
     strftime -s _time "%l:%M:%S"
 
     local _mask=()
     local _staged=()
 
-    # mask character
+
+    # ───── create mask ─────
+
     for _character in ${(s::)_time}; do
         case $_character in
             (0) _mask=(111 101 101 101 111) ;;
@@ -535,12 +614,26 @@ function ztc:alter:face:default {
         _staged+=(${(j:@n:)_mask})
     done
 
-    # interleave + flatten and insert padding
+
+    # ───── set mask key ─────
+
+    local -U _key=()
+
+    _key+=('0#@reset ')
+    _key+=('1#@invert ')
+
+    ztc:stash face:digital:data:key _key
+
+
+    # ───── interleave + flatten (with padding) ─────
+
     ztc:weave _staged
     for _i in {1..${#_staged}}; do _staged[$_i]=${_staged[$_i]//@n/0}; done
 
-    # save
-    ztc:stash face:default:data _staged
+
+    # ───── save ─────
+
+    ztc:stash face:digital:data _staged
 }
 
 
@@ -549,7 +642,6 @@ function ztc:alter:face:default {
 # └────────────┘
 
 function ztc:order:date {
-    # space declaration
     ztc[date:y]=:auto
     ztc[date:x]=:auto
     ztc[date:h]=:auto
@@ -557,10 +649,10 @@ function ztc:order:date {
 }
 
 function ztc:alter:date {
-    local _date
+    local _date=''
     strftime -s _date ${ztc[:date:format]//\%n/@n} # capture newlines
 
-    ztc[date:data]=$_date
+    ztc:stash date:data _date
 }
 
 
@@ -577,7 +669,6 @@ function ztc:order:commander {
 
     # extended component properties
     ztc[commander:overlay]=1
-    ztc[commander:data:format]=raw
 
     # commander properties
     ztc[commander:input]=${ztc[commander:input]:-}
@@ -593,13 +684,13 @@ function ztc:alter:commander {
     # ───── import ─────
 
     local _input=$ztc[commander:input]
-    local _cursor=$ztc[commander:cursor]
+    integer _cursor=$ztc[commander:cursor]
 
 
     # ───── truncate overflows ─────
 
-    local _index=$(( ${#_input} - _cursor ))
-    local _bound=$(( ztc[commander:w] - ${#ztc[commander:prefix]} ))
+    integer _index=$(( ${#_input} - _cursor ))
+    integer _bound=$(( ztc[commander:w] - ${#ztc[commander:prefix]} ))
 
     if (( ${#_input} > _bound )); then
 
@@ -634,8 +725,12 @@ function ztc:alter:commander {
 
     # ───── export ─────
 
-    if (( ztc[commander:active] )); then ztc[commander:data]=${ztc[commander:prefix]}$_input$_position$ZTC_CURSOR_SHOW
-    else ztc[commander:data]=$ztc[commander:status]$ZTC_CURSOR_HIDE; fi
+    local _data=()
+
+    if (( ztc[commander:active] )); then _data=${ztc[commander:prefix]}${_input//@/@@}$_position$ZTC_CURSOR_SHOW
+    else _data=$ztc[commander:status]$ZTC_CURSOR_HIDE; fi
+
+    ztc:stash commander:data _data
 }
 
 
@@ -645,44 +740,85 @@ function ztc:alter:commander {
 
 function ztc:write { print -n ${(j::)@} } # splash paint
 
-function ztc:stash { ztc[$1]=${(Pj:@n:)2} } # (foo bar baz) -> ztc[key]="foo@nbar@nbaz"
-function ztc:steal {                        # ztc[key]="foo@nbar@nbaz" -> (foo bar baz)
 
-    # ───── import + setup ─────
+# ┌─────────────────────┐
+# │    stash + steal    │
+# └─────────────────────┘
 
-    local _theft=(${(As:@@:)ztc[$1]})
+function ztc:stash { # escape flares + flatten array for storage
 
-    local _export=()
-    local _prefix=''
+    # ───── import ─────
+
+    local _pouch=(${(AP)2})
 
 
-    # ───── build array ─────
+    # ───── build stash ─────
 
-    for _jewel in $_theft; do
+    local _stash=()
 
-        # ╶╶╶╶╶ split by `@n` ╴╴╴╴╴
+    for _jewel in $_pouch; do
 
-        local _shiny=(${(As:@n:)_jewel})
+        # ╶╶╶╶╶ escape `@@` + split by `@n` ╴╴╴╴╴
 
-        # ╶╶╶╶╶ re-add escaped `@` ╴╴╴╴╴
+        local _shiny=(${(As:@n:)_jewel//@@/@\(@\)})
 
-        _prefix=${_prefix:+${_prefix}@}
-        _shiny[1]=$_prefix$_shiny[1]
+        # ╶╶╶╶╶ escape `@` + add to stash ╴╴╴╴╴
 
-        # ╶╶╶╶╶ prep for next jewel + add array item ╴╴╴╴╴
+        for _i in {1..${#_shiny}}; do _shiny[$_i]=${_shiny[$_i]//@/@@}; done
 
-        _prefix=$_shiny[-1]
-        shift -p _shiny
-
-        _export+=($_shiny)
+        _stash+=($_shiny)
     done
 
 
     # ───── export ─────
 
-    _export+=($_prefix)
-    : ${(AP)2::=$_export}
+    ztc[$1]=${(j:@n:)_stash//@@\(@@\)/@\(@\)} # reduce `@@(@@)` into `@(@)`
 }
+
+function ztc:steal { # retrieve flattened array + undo flare escapement
+
+    # ───── import ─────
+
+    local _stash=(${(As:@@:)ztc[$1]})
+
+
+    # ───── steal stash ─────
+
+    local _theft=()
+    local _prior=''
+
+    if [[ ${ztc[$1]:0:2} == '@@' ]]; then _prior='@ '; fi # preserve leading `@`
+
+    for _jewel in $_stash; do
+
+        # ╶╶╶╶╶ split by `@n` ╴╴╴╴╴
+
+        local _shiny=(${(As:@n:)_jewel})
+
+        # ╶╶╶╶╶ insert escaped `@` ╴╴╴╴╴
+
+        _prior=${_prior:+${_prior}@}
+        _shiny[1]=${_prior/#@ }$_shiny[1] # `@ @` -> `@`
+
+        # ╶╶╶╶╶ prep for next jewel + add to theft ╴╴╴╴╴
+
+        _prior=$_shiny[-1]
+        shift -p _shiny
+
+        _theft+=($_shiny)
+    done
+
+
+    # ───── export ─────
+
+    _theft+=($_prior)
+    : ${(AP)2::=$_theft}
+}
+
+
+# ┌──────────────┐
+# │    weaver    │
+# └──────────────┘
 
 function ztc:weave { # ((1 1 1) (2 2 2) (3 3 3)) -> ((1 2 3) (1 2 3) (1 2 3))
 
@@ -693,7 +829,7 @@ function ztc:weave { # ((1 1 1) (2 2 2) (3 3 3)) -> ((1 2 3) (1 2 3) (1 2 3))
 
     # ───── determine max sub-length ─────
 
-    local _length=0
+    integer _length=0
 
     for _item in $_array; do
         local _sub=(${(As:@n:)_item})
