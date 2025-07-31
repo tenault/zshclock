@@ -92,6 +92,9 @@ function ztc:drive { # clock go vroom vroom
 function ztc:clean { # dissolve clock + restore terminal state
     integer _code=${1:-0}
     ztc:write $ZTC_CURSOR_SHOW $ZTC_EXIT
+
+    stty dsusp '^Y' # restore delayed suspend
+
     exit $_code
 }
 
@@ -453,6 +456,7 @@ function ztc:input { # detect user inputs + build commands
     if (( ztc[commander:active] )); then # attach input to command bar
         local _input=$ztc[commander:input]
         integer _cursor=$ztc[commander:cursor]
+        integer _index=$(( ${#_input} - _cursor ))
 
         case $_key in
 
@@ -463,48 +467,166 @@ function ztc:input { # detect user inputs + build commands
                 read -st -k 2 _special
 
                 case $_special in
+                    ('[A') ;; # <up>
+                    ('[B') ;; # <down>
                     ('[C') # <right>
                         if (( _cursor > 0 )); then (( ztc[commander:cursor]-- )); fi
                         ;;
                     ('[D') # <left>
-                        if (( _cursor - ${#_input} < 0 )); then (( ztc[commander:cursor]++ )); fi
+                        if (( _index > 0 )); then (( ztc[commander:cursor]++ )); fi
                         ;;
                     ('') ztc:commander:leave ;;
                     (*) ;;
                 esac
                 ;;
 
-            # ╶╶╶╶╶ <ctrl-u> (line clearing) ╴╴╴╴╴
+            # ╶╶╶╶╶ <ctrl-a> (move cursor to beginning) ╴╴╴╴╴
 
-            ($'\x15')
+            ($'\x1') ztc[commander:cursor]=${#_input} ;;
+
+            # ╶╶╶╶╶ <ctrl-b> (<left>) ╴╴╴╴╴
+
+            ($'\x2') if (( _index > 0 )); then (( ztc[commander:cursor]++ )); fi ;;
+
+            # ╶╶╶╶╶ <ctrl-d> (forward delete) ╴╴╴╴╴
+
+            ($'\x4')
+                if (( ${#_input} == 0 )); then ztc:commander:leave
+                else
+                    if (( _index != ${#_input} )); then
+                        ztc[commander:input]=${_input:0:_index}${_input:$(( _index + 1 ))}
+                        (( ztc[commander:cursor]-- ))
+                    fi
+                fi
+                ;;
+
+            # ╶╶╶╶╶ <ctrl-e> (move cursor to end) ╴╴╴╴╴
+
+            ($'\x5') ztc[commander:cursor]=0 ;;
+
+            # ╶╶╶╶╶ <ctrl-f> (<right>) ╴╴╴╴╴
+
+            ($'\x6') if (( _cursor > 0 )); then (( ztc[commander:cursor]-- )); fi ;;
+
+            # ╶╶╶╶╶ <ctrl-g> (<esc>) ╴╴╴╴╴
+
+            ($'\x7') ztc:commander:leave ;;
+
+            # ╶╶╶╶╶ <ctrl-h>/<backspace>/<delete> ╴╴╴╴╴
+
+            ($'\x8'|$'\b'|$'\x7f')
+                if (( _index != 0 )); then ztc[commander:input]=${_input:0:$(( _index - 1 ))}${_input:_index}; fi
+                ;;
+
+            # ╶╶╶╶╶ <ctrl-i> (<tab>) ╴╴╴╴╴
+
+            ($'\x9'|$'\t') ;; # autocomplete stuff goes here
+
+            # ╶╶╶╶╶ <ctrl-j>/<ctrl-m>/<enter>/<return> ╴╴╴╴╴
+
+            ($'\xA'|$'\xD'|$'\n'|$'\r')
+                if (( ${#_input} > 0 )); then
+                    local _parse=${(MS)_input##[[:graph:]]*[[:graph:]]} # trim whitespace
+                    if [[ -z $_parse ]]; then _parse=${(MS)_input##[[:graph:]]}; fi
+
+                    ztc:parse $_parse
+                else
+                    ztc:commander:leave
+                fi
+                ;;
+
+            # ╶╶╶╶╶ <ctrl-k> (delete from cursor to end) ╴╴╴╴╴
+
+            ($'\xB')
+                ztc[commander:yank]=${_input:_index}
+                ztc[commander:input]=${_input:0:_index}
+                ztc[commander:cursor]=0
+                ;;
+
+            # ╶╶╶╶╶ <ctrl-l> (clear the input) ╴╴╴╴╴
+
+            ($'\xC')
                 ztc[commander:input]=''
                 ztc[commander:cursor]=0
                 ;;
 
-            # ╶╶╶╶╶ <ctrl-b> (<left>) ╴╴╴╴╴
+            # ╶╶╶╶╶ <ctrl-n> (<down>) ╴╴╴╴╴
 
-            ($'\x2')
-                if (( _cursor - ${#_input} < 0 )); then (( ztc[commander:cursor]++ )); fi
+            ($'\xE') ;; # next line in history
+
+            # ╶╶╶╶╶ <ctrl-o> (<enter> + next line in history) ╴╴╴╴╴
+
+            ($'\xF') ;; # enter + next line in history
+
+            # ╶╶╶╶╶ <ctrl-p> (<up>) ╴╴╴╴╴
+
+            ($'\x10') ;; # previous line in history
+
+            # ╶╶╶╶╶ <ctrl-q> (pause transmission) ╴╴╴╴╴
+
+            ($'\x11') ;; # pause
+
+            # ╶╶╶╶╶ <ctrl-r> (display/search history) ╴╴╴╴╴
+
+            ($'\x12') ;; # display/search history
+
+            # ╶╶╶╶╶ <ctrl-s> (resume transmission) ╴╴╴╴╴
+
+            ($'\x13') ;; # resume
+
+            # ╶╶╶╶╶ <ctrl-t> (swap characters around cursor) ╴╴╴╴╴
+
+            ($'\x14')
+                if (( _cursor > 0 && _index > 0 )); then
+                    local _a=${_input:$(( _index - 1 )):1}
+                    local _b=${_input:_index:1}
+
+                    ztc[commander:input]=${_input:0:$(( _index - 1 ))}$_b$_a${_input:$(( _index + 1 ))}
+                fi
                 ;;
 
-            # ╶╶╶╶╶ <ctrl-f> (<right>) ╴╴╴╴╴
+            # ╶╶╶╶╶ <ctrl-u> (delete from beginning to cursor) ╴╴╴╴╴
 
-            ($'\x6')
-                if (( _cursor > 0 )); then (( ztc[commander:cursor]-- )); fi
+            ($'\x15')
+                ztc[commander:yank]=${_input:0:_index}
+                ztc[commander:input]=${_input:_index}
                 ;;
 
-            # ╶╶╶╶╶ <backspace>/<delete>/<ctrl-h> ╴╴╴╴╴
+            # ╶╶╶╶╶ <ctrl-v> (literal insert) ╴╴╴╴╴
 
-            ($'\b'|$'\x7f'|$'\x8')
-                integer _index=$(( ${#_input} - _cursor ))
-                if (( _index != 0 )); then ztc[commander:input]=${_input:0:$(( _index - 1 ))}${_input:_index}; fi
+            ($'\x16') ;; # disabled
+
+            # ╶╶╶╶╶ <ctrl-w> (delete word) ╴╴╴╴╴
+
+            ($'\x17')
+                if (( _index != 0 )); then
+                    local _erase=${(*)${_input:0:_index}/%[[:space:]]#} # trim trailing spaces
+                    local _trim=${(MS)_erase##[[:graph:]]*[[:graph:]]}  # trim all whitespace
+
+                    if [[ -z $_trim ]]; then _trim=${(MS)_erase##[[:graph:]]}; fi
+
+                    if [[ ! $_erase =~ ' ' ]]; then _erase=''
+                    else _erase="${_erase%[[:space:]]*} "; fi  # remove last word
+
+                    ztc[commander:yank]=${_trim##*[[:space:]]} # select last word
+                    ztc[commander:input]=$_erase${_input:_index}
+                fi
                 ;;
 
-            # ╶╶╶╶╶ <enter>/<return> ╴╴╴╴╴
+            # ╶╶╶╶╶ <ctrl-x> (alternate between cursor and beginning) ╴╴╴╴╴
 
-            ($'\n'|$'\r')
-                if (( ${#_input} > 0 )); then ztc:parse $_input; else ztc:commander:leave; fi
+            ($'\x18')
+                if (( _index != 0 )); then
+                    ztc[commander:cursor:last]=$_cursor
+                    ztc[commander:cursor]=${#_input}
+                else
+                    ztc[commander:cursor]=$ztc[commander:cursor:last]
+                fi
                 ;;
+
+            # ╶╶╶╶╶ <ctrl-y> (paste) ╴╴╴╴╴
+
+            ($'\x19') ztc[commander:input]=${_input:0:_index}$ztc[commander:yank]${_input:_index} ;;
 
             # ╶╶╶╶╶ ignore empty keys ╴╴╴╴╴
 
@@ -599,7 +721,7 @@ function ztc:alter:face:digital {
     for _character in ${(s::)_time}; do
         case $_character in
             (0) _mask=(111 101 101 101 111) ;;
-            (1) _mask=(110 010 010 010 111) ;;
+            (1) _mask=(001 001 001 001 001) ;;
             (2) _mask=(111 001 111 100 111) ;;
             (3) _mask=(111 001 111 001 111) ;;
             (4) _mask=(101 101 111 001 001) ;;
@@ -608,7 +730,7 @@ function ztc:alter:face:digital {
             (7) _mask=(111 001 001 001 001) ;;
             (8) _mask=(111 101 111 101 111) ;;
             (9) _mask=(111 101 111 001 111) ;;
-            (:) _mask=(  0   1   0   1   0) ;;
+            (:) _mask=( 0   1   0   1   0 ) ;;
         esac
 
         _staged+=(${(j:@n:)_mask})
@@ -619,8 +741,9 @@ function ztc:alter:face:digital {
 
     local -U _key=()
 
-    _key+=('0#@reset ')
-    _key+=('1#@invert ')
+    _key+=('0#@r  ')
+    _key+=('1#@i  ')
+    _key+=('.#@r ')
 
     ztc:stash face:digital:data:key _key
 
@@ -628,7 +751,7 @@ function ztc:alter:face:digital {
     # ───── interleave + flatten (with padding) ─────
 
     ztc:weave _staged
-    for _i in {1..${#_staged}}; do _staged[$_i]=${_staged[$_i]//@n/0}; done
+    for _i in {1..${#_staged}}; do _staged[$_i]=${_staged[$_i]//@n/.}; done
 
 
     # ───── save ─────
@@ -671,12 +794,15 @@ function ztc:order:commander {
     ztc[commander:overlay]=1
 
     # commander properties
-    ztc[commander:input]=${ztc[commander:input]:-}
-    ztc[commander:cursor]=${ztc[commander:cursor]:-0}
-
     ztc[commander:active]=${ztc[commander:active]:-0}
-    ztc[commander:status]=${ztc[commander:status]:-}
+
     ztc[commander:prefix]=${ztc[commander:prefix]:-:}
+    ztc[commander:status]=${ztc[commander:status]:-}
+    ztc[commander:input]=${ztc[commander:input]:-}
+
+    ztc[commander:yank]=${ztc[commander:yank]:-}
+    ztc[commander:cursor]=${ztc[commander:cursor]:-0}
+    ztc[commander:cursor:last]=${ztc[commander:cursor:last]:-0}
 }
 
 function ztc:alter:commander {
@@ -798,7 +924,7 @@ function ztc:steal { # retrieve flattened array + undo flare escapement
         # ╶╶╶╶╶ insert escaped `@` ╴╴╴╴╴
 
         _prior=${_prior:+${_prior}@}
-        _shiny[1]=${_prior/#@ }$_shiny[1] # `@ @` -> `@`
+        _shiny[1]=${_prior/#@ }$_shiny[1] # compress `@ @` into `@`
 
         # ╶╶╶╶╶ prep for next jewel + add to theft ╴╴╴╴╴
 
@@ -865,6 +991,8 @@ function ztc:weave { # ((1 1 1) (2 2 2) (3 3 3)) -> ((1 2 3) (1 2 3) (1 2 3))
 
 function zsh_that_clock {
     trap 'ztc:clean 1' INT
+
+    stty dsusp undef # disable delayed suspend (frees ^Y for paste)
 
     zmodload zsh/datetime
 
