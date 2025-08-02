@@ -163,6 +163,7 @@ function ztc:plonk { # set config settings + register parts
 
     local -U _components=(face:digital date commander)
     ztc:stash components _components
+
 }
 
 
@@ -284,8 +285,7 @@ function ztc:paint { # translate component data for rendering
                 (:auto) # set width to length of longest line
                     local _length=0
 
-                    for _line in $_flared; do
-                        # strip escapes
+                    for _line in $_flared; do # strip escapes
                         _line=${_line//@\(@\)/@}
                         _line=${(S)_line//${ZTC_CSI}*(m|H|K|J|A|B|C|D|E|F|G|S|T|f|i|n|h|l|s|u)}
 
@@ -380,6 +380,7 @@ function ztc:paint { # translate component data for rendering
     # ───── render ─────
 
     ztc:write $ZTC_CLEAR ${(j::)_staged}
+
 }
 
 # ┌╴╴╴╴╴╴╴╴╴╴╴╴╴╴╴┐
@@ -431,6 +432,7 @@ function ztc:flare { # expand `@` flares + calc width
     # ───── export ─────
 
     : ${(AP)2::=${(s:@n:)_input}}
+
 }
 
 function ztc:flare:newline   { : ${(P)1::=${(P)1//@\($2\)/@n}}               }
@@ -454,57 +456,192 @@ function ztc:input { # detect user inputs + build commands
     # ───── process input ─────
 
     if (( ztc[commander:active] )); then # attach input to command bar
+
         local _input=$ztc[commander:input]
         integer _cursor=$ztc[commander:cursor]
         integer _index=$(( ${#_input} - _cursor ))
 
         case $_key in
 
-            # ╶╶╶╶╶ <esc> + arrow keys ╴╴╴╴╴
+            # ╶╶╶╶╶ ignore empty keys ╴╴╴╴╴
+
+            ('') ;;
+
+            # ╶╶╶╶╶ <esc> + special keys ╴╴╴╴╴
 
             ($'\e')
-                local _special=''
-                read -st -k 2 _special
+                local _s1=''
+                local _s2=''
+                local _s3=''
+                local _s4=''
+                local _s5=''
+
+                read -st -k 1 _s1
+                read -st -k 1 _s2
+                read -st -k 1 _s3
+                read -st -k 1 _s4
+                read -st -k 1 _s5
+
+                local _special=$_s1$_s2$_s3$_s4$_s5
 
                 case $_special in
-                    ('[A') ;; # <up>
-                    ('[B') ;; # <down>
-                    ('[C') # <right>
-                        if (( _cursor > 0 )); then (( ztc[commander:cursor]-- )); fi
-                        ;;
-                    ('[D') # <left>
-                        if (( _index > 0 )); then (( ztc[commander:cursor]++ )); fi
-                        ;;
+
+                    # ╶╶╶╶╶ <esc> ╴╴╴╴╴
+
                     ('') ztc:commander:leave ;;
+
+                    # ╶╶╶╶╶ <up> ╴╴╴╴╴
+
+                    ('[A') ;;
+
+                    # ╶╶╶╶╶ <down> ╴╴╴╴╴
+
+                    ('[B') ;;
+
+                    # ╶╶╶╶╶ <right> (move cursor right) ╴╴╴╴╴
+
+                    ('[C') if (( _cursor > 0 )); then (( ztc[commander:cursor]-- )); fi ;;
+
+                    # ╶╶╶╶╶ <left> (move cursor left) ╴╴╴╴╴
+
+                    ('[D') if (( _index > 0 )); then (( ztc[commander:cursor]++ )); fi ;;
+
+                    # ╶╶╶╶╶ <alt-delete> (delete word) ╴╴╴╴╴
+
+                    ($'\x7f')
+                        if (( _index != 0 )); then
+                            local _left=''
+                            local _word=''
+                            ztc:words _input _index left _left _word
+
+                            ztc[commander:yank]=$_word
+                            ztc[commander:input]=$_left${_input:_index}
+                        fi ;;
+
+                    # ╶╶╶╶╶ <alt-b>/<alt-left> (move cursor one word left) ╴╴╴╴╴
+
+                    ('b'|'[1;3D')
+                        if (( _index != 0 )); then
+                            local _left=''
+                            ztc:words _input _index left _left
+
+                            ztc[commander:cursor]=$(( ${#_input} - ${#_left} ))
+                        fi ;;
+
+                    # ╶╶╶╶╶ <alt-c> (capitalize word) ╴╴╴╴╴
+
+                    ('c')
+                        local _left=''
+                        local _right=''
+                        local _lword=''
+                        local _rword=''
+
+                        ztc:words _input _index both _left _right _lword _rword
+                        ztc:shift _input _index C _left _right _lword _rword
+
+                        ztc[commander:input]=$_input
+                        ztc[commander:cursor]=${#_right}
+                        ;;
+
+                    # ╶╶╶╶╶ <alt-d> (forward delete word) ╴╴╴╴╴
+
+                    ('d')
+                        if (( _cursor != 0 )); then
+                            local _right=''
+                            local _word=''
+                            ztc:words _input _index right _right _word
+
+                            ztc[commander:yank]=$_word
+                            ztc[commander:input]=${_input:0:_index}$_right
+                            ztc[commander:cursor]=${#_right}
+                        fi ;;
+
+                    # ╶╶╶╶╶ <alt-f>/<alt-right> (move cursor one word right) ╴╴╴╴╴
+
+                    ('f'|'[1;3C')
+                        if (( _cursor != 0 )); then
+                            local right=''
+                            ztc:words _input _index right _right
+
+                            ztc[commander:cursor]=${#_right}
+                        fi ;;
+
+                    # ╶╶╶╶╶ <alt-l> (lowercase word) ╴╴╴╴╴
+
+                    ('l')
+                        local _left=''
+                        local _right=''
+                        local _lword=''
+                        local _rword=''
+
+                        ztc:words _input _index both _left _right _lword _rword
+                        ztc:shift _input _index L _left _right _lword _rword
+
+                        ztc[commander:input]=$_input
+                        ztc[commander:cursor]=${#_right}
+                        ;;
+
+                    # ╶╶╶╶╶ <alt-t> (swap words around cursor) ╴╴╴╴╴
+
+                    ('t')
+                        local _left=''
+                        local _right=''
+                        local _lword=''
+                        local _rword=''
+
+                        ztc:words _input _index both _left _right _lword _rword
+                        ztc:shift _input _index T _left _right _lword _rword
+
+                        ztc[commander:input]=$_input
+                        ztc[commander:cursor]=${#_right}
+                        ;;
+
+                    # ╶╶╶╶╶ <alt-u> (uppercase word) ╴╴╴╴╴
+
+                    ('u')
+                        local _left=''
+                        local _right=''
+                        local _lword=''
+                        local _rword=''
+
+                        ztc:words _input _index both _left _right _lword _rword
+                        ztc:shift _input _index U _left _right _lword _rword
+
+                        ztc[commander:input]=$_input
+                        ztc[commander:cursor]=${#_right}
+                        ;;
+
+                    # ╶╶╶╶╶ ignore all other special keys ╴╴╴╴╴
+
                     (*) ;;
-                esac
-                ;;
+
+                esac ;;
 
             # ╶╶╶╶╶ <ctrl-a> (move cursor to beginning) ╴╴╴╴╴
 
             ($'\x1') ztc[commander:cursor]=${#_input} ;;
 
-            # ╶╶╶╶╶ <ctrl-b> (<left>) ╴╴╴╴╴
+            # ╶╶╶╶╶ <ctrl-b> (move cursor left) ╴╴╴╴╴
 
             ($'\x2') if (( _index > 0 )); then (( ztc[commander:cursor]++ )); fi ;;
 
             # ╶╶╶╶╶ <ctrl-d> (forward delete) ╴╴╴╴╴
 
             ($'\x4')
-                if (( ${#_input} == 0 )); then ztc:commander:leave
+                if (( ${#_input} == 0 )); then
+                    ztc:commander:leave
                 else
                     if (( _index != ${#_input} )); then
                         ztc[commander:input]=${_input:0:_index}${_input:$(( _index + 1 ))}
                         (( ztc[commander:cursor]-- ))
                     fi
-                fi
-                ;;
+                fi ;;
 
             # ╶╶╶╶╶ <ctrl-e> (move cursor to end) ╴╴╴╴╴
 
             ($'\x5') ztc[commander:cursor]=0 ;;
 
-            # ╶╶╶╶╶ <ctrl-f> (<right>) ╴╴╴╴╴
+            # ╶╶╶╶╶ <ctrl-f> (move cursor) ╴╴╴╴╴
 
             ($'\x6') if (( _cursor > 0 )); then (( ztc[commander:cursor]-- )); fi ;;
 
@@ -514,9 +651,7 @@ function ztc:input { # detect user inputs + build commands
 
             # ╶╶╶╶╶ <ctrl-h>/<backspace>/<delete> ╴╴╴╴╴
 
-            ($'\x8'|$'\b'|$'\x7f')
-                if (( _index != 0 )); then ztc[commander:input]=${_input:0:$(( _index - 1 ))}${_input:_index}; fi
-                ;;
+            ($'\x8'|$'\b'|$'\x7f') if (( _index != 0 )); then ztc[commander:input]=${_input:0:$(( _index - 1 ))}${_input:_index}; fi ;;
 
             # ╶╶╶╶╶ <ctrl-i> (<tab>) ╴╴╴╴╴
 
@@ -532,8 +667,7 @@ function ztc:input { # detect user inputs + build commands
                     ztc:parse $_parse
                 else
                     ztc:commander:leave
-                fi
-                ;;
+                fi ;;
 
             # ╶╶╶╶╶ <ctrl-k> (delete from cursor to end) ╴╴╴╴╴
 
@@ -577,12 +711,18 @@ function ztc:input { # detect user inputs + build commands
             # ╶╶╶╶╶ <ctrl-t> (swap characters around cursor) ╴╴╴╴╴
 
             ($'\x14')
-                if (( _cursor > 0 && _index > 0 )); then
+                if (( _index > 0 )); then
+                    if (( _cursor == 0 )); then (( _index -= 1 )); fi
+
+                    local _left=${_input:0:$(( _index - 1 ))}
+                    local _right=${_input:$(( _index + 1 ))}
                     local _a=${_input:$(( _index - 1 )):1}
                     local _b=${_input:_index:1}
 
-                    ztc[commander:input]=${_input:0:$(( _index - 1 ))}$_b$_a${_input:$(( _index + 1 ))}
+                    ztc[commander:input]=$_left$_b$_a$_right
                 fi
+
+                if (( _cursor > 0 )); then (( ztc[commander:cursor]-- )); fi
                 ;;
 
             # ╶╶╶╶╶ <ctrl-u> (delete from beginning to cursor) ╴╴╴╴╴
@@ -600,18 +740,13 @@ function ztc:input { # detect user inputs + build commands
 
             ($'\x17')
                 if (( _index != 0 )); then
-                    local _erase=${(*)${_input:0:_index}/%[[:space:]]#} # trim trailing spaces
-                    local _trim=${(MS)_erase##[[:graph:]]*[[:graph:]]}  # trim all whitespace
+                    local _left=''
+                    local _word=''
+                    ztc:words _input _index left _left _word
 
-                    if [[ -z $_trim ]]; then _trim=${(MS)_erase##[[:graph:]]}; fi
-
-                    if [[ ! $_erase =~ ' ' ]]; then _erase=''
-                    else _erase="${_erase%[[:space:]]*} "; fi  # remove last word
-
-                    ztc[commander:yank]=${_trim##*[[:space:]]} # select last word
-                    ztc[commander:input]=$_erase${_input:_index}
-                fi
-                ;;
+                    ztc[commander:yank]=$_word
+                    ztc[commander:input]=$_left${_input:_index}
+                fi ;;
 
             # ╶╶╶╶╶ <ctrl-x> (alternate between cursor and beginning) ╴╴╴╴╴
 
@@ -621,23 +756,18 @@ function ztc:input { # detect user inputs + build commands
                     ztc[commander:cursor]=${#_input}
                 else
                     ztc[commander:cursor]=$ztc[commander:cursor:last]
-                fi
-                ;;
+                fi ;;
 
             # ╶╶╶╶╶ <ctrl-y> (paste) ╴╴╴╴╴
 
             ($'\x19') ztc[commander:input]=${_input:0:_index}$ztc[commander:yank]${_input:_index} ;;
 
-            # ╶╶╶╶╶ ignore empty keys ╴╴╴╴╴
-
-            ('') ;;
-
             # ╶╶╶╶╶ insert key at cursor index ╴╴╴╴╴
 
-            (*)
-                integer _index=$(( ${#_input} - _cursor ))
+            (*) integer _index=$(( ${#_input} - _cursor ))
                 ztc[commander:input]=${_input:0:_index}$_key${_input:_index}
                 ;;
+
         esac
 
         ztc:cycle commander
@@ -652,6 +782,7 @@ function ztc:input { # detect user inputs + build commands
         esac
 
     fi
+
 }
 
 # ┌╴╴╴╴╴╴╴╴╴╴╴╴╴╴╴┐
@@ -675,8 +806,7 @@ function ztc:parse { # delegate command to correct parser
                 ztc:commander:leave
             else
                 ztc:commander:leave "@i Unknown command: ${_command//@/@@} @r"
-            fi
-            ;;
+            fi ;;
     esac
 }
 
@@ -839,6 +969,7 @@ function ztc:alter:commander {
 
         _input="$_left$_right"
         _cursor=${#_right}
+
     fi
 
 
@@ -857,6 +988,7 @@ function ztc:alter:commander {
     else _data=$ztc[commander:status]$ZTC_CURSOR_HIDE; fi
 
     ztc:stash commander:data _data
+
 }
 
 
@@ -893,12 +1025,14 @@ function ztc:stash { # escape flares + flatten array for storage
         for _i in {1..${#_shiny}}; do _shiny[$_i]=${_shiny[$_i]//@/@@}; done
 
         _stash+=($_shiny)
+
     done
 
 
     # ───── export ─────
 
     ztc[$1]=${(j:@n:)_stash//@@\(@@\)/@\(@\)} # reduce `@@(@@)` into `@(@)`
+
 }
 
 function ztc:steal { # retrieve flattened array + undo flare escapement
@@ -932,6 +1066,7 @@ function ztc:steal { # retrieve flattened array + undo flare escapement
         shift -p _shiny
 
         _theft+=($_shiny)
+
     done
 
 
@@ -939,6 +1074,7 @@ function ztc:steal { # retrieve flattened array + undo flare escapement
 
     _theft+=($_prior)
     : ${(AP)2::=$_theft}
+
 }
 
 
@@ -982,6 +1118,141 @@ function ztc:weave { # ((1 1 1) (2 2 2) (3 3 3)) -> ((1 2 3) (1 2 3) (1 2 3))
     # ───── export ─────
 
     : ${(AP)1::=$_weaved}
+
+}
+
+
+# ┌─────────────┐
+# │    words    │
+# └─────────────┘
+
+function ztc:words { # get closest word boundaries (ztc:words _input _index both _left _right _lword _rword)
+
+    # ───── import ─────
+
+    local _in=${(P)1}
+    local _i=${(P)2}
+
+
+    # ───── split left/right + get closest word boundaries ─────
+
+    local _l=${(*)${_in:0:_i}/%[[:space:]]#} # trim trailing spaces in left
+    local _r=${(*)${_in:_i}/#[[:space:]]#}   # trim leading spaces in right
+
+    local _lw=${(MS)_l##[[:graph:]]*[[:graph:]]} # trim all whitespace in left
+    local _rw=${(MS)_r##[[:graph:]]*[[:graph:]]} # trim all whitespace in right
+    if [[ -z $_lw ]]; then _lw=${(MS)_l##[[:graph:]]}; fi
+    if [[ -z $_rw ]]; then _rw=${(MS)_r##[[:graph:]]}; fi
+
+    if [[ ! $_l =~ ' ' ]]; then _l=''
+    else _l="${_l%[[:space:]]*} "; fi  # remove last word in left
+
+    if [[ ! $_r =~ ' ' ]]; then _r=''
+    else _r=" ${_r#*[[:space:]]}"; fi # remove first word in right
+
+    _lw=${_lw##*[[:space:]]} # select last word in left
+    _rw=${_rw%%[[:space:]]*} # select first word in right
+
+
+    # ───── export ─────
+
+    case $3 in
+        (left)
+            if [[ -n $4 ]]; then : ${(P)4::=$_l}; fi
+            if [[ -n $5 ]]; then : ${(P)5::=$_lw}; fi
+            ;;
+        (right)
+            if [[ -n $4 ]]; then : ${(P)4::=$_r}; fi
+            if [[ -n $5 ]]; then : ${(P)5::=$_rw}; fi
+            ;;
+        (both)
+            if [[ -n $4 ]]; then : ${(P)4::=$_l}; fi
+            if [[ -n $5 ]]; then : ${(P)5::=$_r}; fi
+            if [[ -n $6 ]]; then : ${(P)6::=$_lw}; fi
+            if [[ -n $7 ]]; then : ${(P)7::=$_rw}; fi
+            ;;
+    esac
+
+}
+
+function ztc:shift { # transform word at boundary (ztc:shift _input _index (T|C|L|U) _left _right _lword _rword)
+
+    # ───── import ─────
+
+    local _in=${(P)1}
+    local _i=${(P)2}
+    local _l=${(P)4}
+    local _r=${(P)5}
+    local _lw=${(P)6}
+    local _rw=${(P)7}
+
+    local _shift=$3
+
+
+    # ───── get word(s) ─────
+
+    local _lb=$(( _i - ${#_lw} ))
+    local _rb=$(( ${#_lw} + ${#_rw} ))
+
+    if [[ $_shift == 'T' && "$_lw$_rw" == "${_in:_lb:_rb}" ]]; then # cursor is inside word
+
+        _rw=$_lw$_rw
+
+        _l=${(*)_l/%[[:space:]]#} # retrim trailing spaces
+        _lw=${_l##*[[:space:]]}   # select new last word
+
+        if [[ ! $_l =~ ' ' ]]; then _l=''
+        else _l="${_l%[[:space:]]*} "; fi # remove new last word
+
+    elif [[ $_shift != 'T' && "$_lw$_rw" != "${_in:_lb:_rb}" ]]; then # cursor is between words
+
+        _lb=$_i
+        _rb=$(( ${#_rw} + 1 ))
+
+        _l="$_l$_lw " # reattach
+
+    fi
+
+
+    # ───── shift word(s) + export ─────
+
+    local _w=''
+
+    case $_shift in
+
+        # ╶╶╶╶╶ transpose ╴╴╴╴╴
+
+        (T) if [[ -n $_lw ]]; then _rw="$_rw "; fi
+            _w=$_rw$_lw
+            ;;
+
+        # ╶╶╶╶╶ capitalize ╴╴╴╴╴
+
+        (C) _w=${(MS)${(C)_in:_lb:_rb}##[[:graph:]]*[[:graph:]]} # trim whitespace
+            if [[ -z $_w ]]; then _word=${(MS)${(C)_in:_lb:_rb}##[[:graph:]]}; fi
+            ;;
+
+        # ╶╶╶╶╶ lowercase ╴╴╴╴╴
+
+        (L) _w=${(MS)${(L)_in:_lb:_rb}##[[:graph:]]*[[:graph:]]} # trim whitespace
+            if [[ -z $_w ]]; then _word=${(MS)${(L)_in:_lb:_rb}##[[:graph:]]}; fi
+            ;;
+
+        # ╶╶╶╶╶ uppercase ╴╴╴╴╴
+
+        (U) _w=${(MS)${(U)_in:_lb:_rb}##[[:graph:]]*[[:graph:]]} # trim whitespace
+            if [[ -z $_w ]]; then _word=${(MS)${(U)_in:_lb:_rb}##[[:graph:]]}; fi
+            ;;
+
+    esac
+
+    : ${(P)4::=$_l}
+    : ${(P)5::=$_r}
+    : ${(P)6::=$_lw}
+    : ${(P)7::=$_rw}
+
+    : ${(P)1::=$_l$_w$_r}
+
 }
 
 
