@@ -46,6 +46,7 @@ ZTC_CURSOR_HIDE=${ZTC_CSI}?25l
 
 ZTC_TEXT_RESET=${ZTC_CSI}0m
 ZTC_TEXT_BOLD=${ZTC_CSI}1m
+ZTC_TEXT_UNDERLINE=${ZTC_CSI}4m
 ZTC_TEXT_INVERT=${ZTC_CSI}7m
 
 
@@ -116,7 +117,7 @@ function ztc:plonk { # set config settings + register parts
 
     # ───── register flares ─────
 
-    local -U _ztcpl_flares=(newline reset bold invert)
+    local -U _ztcpl_flares=(newline reset bold underline invert)
     local -A _ztcpl_guide=()
 
     # ╶╶╶╶╶ generate short flares ╴╴╴╴╴
@@ -209,10 +210,13 @@ function ztc:commander:leave {
     ztc[commander:status:epoch]=$EPOCHREALTIME
 
     ztc[commander:active]=0
-    ztc[commander:input]=''
-    ztc[commander:cursor]=0
+    ztc[commander:help]=0
+
     ztc[commander:history:index]=0
     ztc[commander:history:filter]=''
+
+    ztc[commander:input]=''
+    ztc[commander:cursor]=0
 }
 
 function ztc:commander:clear {
@@ -541,10 +545,11 @@ function ztc:flare { # expand `@` flares + calc width
 
 }
 
-function ztc:flare:newline   { : ${(P)1::=${(P)1//@\($2\)/@n}}               }
-function ztc:flare:reset     { : ${(P)1::=${(P)1//@\($2\)/$ZTC_TEXT_RESET}}  }
-function ztc:flare:bold      { : ${(P)1::=${(P)1//@\($2\)/$ZTC_TEXT_BOLD}}   }
-function ztc:flare:invert    { : ${(P)1::=${(P)1//@\($2\)/$ZTC_TEXT_INVERT}} }
+function ztc:flare:newline   { : ${(P)1::=${(P)1//@\($2\)/@n}}                  }
+function ztc:flare:reset     { : ${(P)1::=${(P)1//@\($2\)/$ZTC_TEXT_RESET}}     }
+function ztc:flare:bold      { : ${(P)1::=${(P)1//@\($2\)/$ZTC_TEXT_BOLD}}      }
+function ztc:flare:underline { : ${(P)1::=${(P)1//@\($2\)/$ZTC_TEXT_UNDERLINE}} }
+function ztc:flare:invert    { : ${(P)1::=${(P)1//@\($2\)/$ZTC_TEXT_INVERT}}    }
 
 
 # ┌─────────────────┐
@@ -598,11 +603,11 @@ function ztc:input { # detect user inputs + build commands
 
                     # ╶╶╶╶╶ <up> (previous line in history) ╴╴╴╴╴
 
-                    ('[A') ztc:commander:serve previous ;;
+                    ('[A') if (( ! ztc[commander:help] )); then ztc:commander:serve previous; fi ;;
 
                     # ╶╶╶╶╶ <down> (next line in history) ╴╴╴╴╴
 
-                    ('[B') ztc:commander:serve next ;;
+                    ('[B') if (( ! ztc[commander:help] )); then ztc:commander:serve next; fi ;;
 
                     # ╶╶╶╶╶ <right> (move cursor right) ╴╴╴╴╴
 
@@ -626,11 +631,11 @@ function ztc:input { # detect user inputs + build commands
 
                     # ╶╶╶╶╶ <alt-<> (first line in history) ╴╴╴╴╴
 
-                    ('<') ztc:commander:serve first ;;
+                    ('<') if (( ! ztc[commander:help] )); then ztc:commander:serve first; fi ;;
 
                     # ╶╶╶╶╶ <alt->> (last line in history) ╴╴╴╴╴
 
-                    ('>') ztc:commander:serve last ;;
+                    ('>') if (( ! ztc[commander:help] )); then ztc:commander:serve last; fi ;;
 
                     # ╶╶╶╶╶ <alt-b>/<alt-left> (move cursor one word left) ╴╴╴╴╴
 
@@ -675,11 +680,11 @@ function ztc:input { # detect user inputs + build commands
 
                     # ╶╶╶╶╶ <alt-n>/<alt-down> (next line in history based on input) ╴╴╴╴╴
 
-                    ('n'|'[1;3B') if [[ -n $_ztci_input ]]; then ztc:commander:serve next $_ztci_input; fi ;;
+                    ('n'|'[1;3B') if [[ -n $_ztci_input && $ztc[commander:help] -eq 0 ]]; then ztc:commander:serve next $_ztci_input; fi ;;
 
                     # ╶╶╶╶╶ <alt-p>/<alt-up> (previous line in history based on input) ╴╴╴╴╴
 
-                    ('p'|'[1;3A') if [[ -n $_ztci_input ]]; then ztc:commander:serve previous $_ztci_input; fi ;;
+                    ('p'|'[1;3A') if [[ -n $_ztci_input && $ztc[commander:help] -eq 0 ]]; then ztc:commander:serve previous $_ztci_input; fi ;;
 
                     # ╶╶╶╶╶ <alt-t> (swap words around cursor) ╴╴╴╴╴
 
@@ -738,9 +743,15 @@ function ztc:input { # detect user inputs + build commands
             # ╶╶╶╶╶ <ctrl-j>/<ctrl-m>/<enter>/<return> ╴╴╴╴╴
 
             ($'\xA'|$'\xD'|$'\n'|$'\r')
-                if (( ${#_ztci_input} > 0 )); then ztc:commander:yield $_ztci_input
-                else ztc:commander:leave; fi
-                ;;
+                if (( ! ztc[commander:help] )); then
+                    if (( ${#_ztci_input} > 0 )); then ztc:commander:yield $_ztci_input
+                    else ztc:commander:leave; fi
+                else
+                    local _ztci_parse=${(MS)_ztci_input##[[:graph:]]*[[:graph:]]}
+                    if [[ -z $_ztci_parse ]]; then _ztci_parse=${(MS)_ztci_input##[[:graph:]]}; fi
+
+                    ztc:parse $_ztci_parse
+                fi ;;
 
             # ╶╶╶╶╶ <ctrl-k> (delete from cursor to end) ╴╴╴╴╴
 
@@ -760,26 +771,27 @@ function ztc:input { # detect user inputs + build commands
 
             # ╶╶╶╶╶ <ctrl-n> (next line in history) ╴╴╴╴╴
 
-            ($'\xE') ztc:commander:serve next ;;
+            ($'\xE') if (( ! ztc[commander:help] )); then ztc:commander:serve next; fi ;;
 
             # ╶╶╶╶╶ <ctrl-o> (<enter> + next line in history) ╴╴╴╴╴
 
             ($'\xF')
-                local _ztci_history_index=$ztc[commander:history:index]
-                local _ztci_history_filter=$ztc[commander:history:filter]
+                if (( ! ztc[commander:help] )); then
+                    local _ztci_history_index=$ztc[commander:history:index]
+                    local _ztci_history_filter=$ztc[commander:history:filter]
 
-                if (( ${#_ztci_input} > 0 )); then ztc:commander:yield $_ztci_input
-                else ztc:commander:leave; fi
+                    if (( ${#_ztci_input} > 0 )); then ztc:commander:yield $_ztci_input
+                    else ztc:commander:leave; fi
 
-                ztc:commander:enter
-                ztc[commander:history:index]=$(( _ztci_history_index + 1 )) # adjust for dup removal
-                ztc[commander:history:filter]=$_ztci_history_filter
-                ztc:commander:serve next
-                ;;
+                    ztc:commander:enter
+                    ztc[commander:history:index]=$(( _ztci_history_index + 1 )) # adjust for dup removal
+                    ztc[commander:history:filter]=$_ztci_history_filter
+                    ztc:commander:serve next
+                fi ;;
 
             # ╶╶╶╶╶ <ctrl-p> (previous line in history) ╴╴╴╴╴
 
-            ($'\x10') ztc:commander:serve previous ;;
+            ($'\x10') if (( ! ztc[commander:help] )); then ztc:commander:serve previous; fi ;;
 
             # ╶╶╶╶╶ <ctrl-q> (literal insert) ╴╴╴╴╴
 
@@ -859,9 +871,24 @@ function ztc:input { # detect user inputs + build commands
     else # input is a shortcut
 
         case $_ztci_key in
-            (:|$'\n'|$'\r'|$'\xA'|$'\xD') ztc:commander:enter ;;
+
+            # ╶╶╶╶╶ clear status ╴╴╴╴╴
+
             ($'\e') ztc:commander:clear ;;
-            (q|Q)   ztc:clean ;;
+
+            # ╶╶╶╶╶ quit ╴╴╴╴╴
+
+            (q|Q) ztc:clean ;;
+
+            # ╶╶╶╶╶ command bar ╴╴╴╴╴
+
+            (:|$'\n'|$'\r'|$'\xA'|$'\xD') ztc:commander:enter ;;
+
+            # ╶╶╶╶╶ helper ╴╴╴╴╴
+
+            (\?) ztc[commander:help]=1
+                ztc:commander:enter '? '
+                ;;
         esac
 
     fi
@@ -873,27 +900,43 @@ function ztc:input { # detect user inputs + build commands
 # └╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶┘
 
 function ztc:parse { # delegate command to correct parser
-    local _ztcps_input=(${(As: :)1})
-    local _ztcps_command=${(L)_ztcps_input[1]//\\/\\\\}
-
     local -U _ztcps_commands=()
     ztc:steal :commands _ztcps_commands
 
-    case $_ztcps_command in
-        (q|quit|exit)
-            ztc:clean
-            ;;
-        (*)
-            if (( _ztcps_commands[(Ie)$_ztcps_command] )); then
-                ztc:parse:$_ztcps_command ${_ztcps_input:1}
-                ztc:commander:leave
-            else
-                ztc:commander:leave "@i Unknown command: ${_ztcps_command//@/@@} @r"
-            fi ;;
-    esac
+    if [[ -n $1 ]]; then
+        local _ztcps_input=(${(As: :)1})
+        local _ztcps_command=${(L)_ztcps_input[1]//\\/\\\\}
+
+        case $_ztcps_command in
+            (q|quit|exit)
+                ztc:clean
+                ;;
+            (\?)
+
+                ;;
+            (*)
+                if (( _ztcps_commands[(Ie)$_ztcps_command] )); then
+                    ztc:parse:$_ztcps_command ${_ztcps_input:1}
+                    ztc:commander:leave
+                else
+                    ztc:commander:leave "@i Unknown command: ${_ztcps_command//@/@@} @r"
+                fi ;;
+        esac
+    else
+        local _ztcps_list=()
+
+        for _ztcps_command in $_ztcps_commands; do
+            _ztcps_list+=("@u$_ztcps_command@r")
+        done
+
+        ztc:commander:leave "@i Usage: date <format> @n @n Arguments: @n     format    An strftime-compatible string to format the date. @r"
+        # ztc:commander:leave "@i Available commands: ${(j:@i, :)_ztcps_list}@i @r"
+    fi
 }
 
 function ztc:parse:date {
+    local _ztcpsd_usage="@i Usage: date <format> @n@n Arguments: @n     format    @r"
+
     local _ztcpsd_format=${(j: :)@}
     ztc[:date:format]=${_ztcpsd_format:-"%a %b %d %p"}
     ztc:cycle date
@@ -1014,6 +1057,7 @@ function ztc:order:commander {
     # ───── custom properties ─────
 
     ztc[commander:active]=${ztc[commander:active]:-0}
+    ztc[commander:help]=${ztc[commander:help]:-0}
 
     ztc[commander:prefix]=${ztc[commander:prefix]:-:}
     ztc[commander:status]=${ztc[commander:status]:-}
