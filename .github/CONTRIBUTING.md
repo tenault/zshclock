@@ -6,24 +6,16 @@ Whether it's a [simple question][question] or [feature request][request] in Disc
 
 That being said, zshclock has just a few things for you to keep in mind if you decide to help make it better ♥
 
-<details open>
-<summary>Table of Contents</summary>
+<details>
+<summary>Bug Reports :bug:</summary>
 
-- [Bug Reports](#bug-reports)
-- [Feature Requests](#feature-requests)
-- [Code Contributions](#code-contributions)
-
-</details>
-
-## Bug Reports :bug:
-
-### :x: Don't
+#### :x: Don't
 
 - Stay silent. If something's a little wonky for you, it's likely pretty wonky for lots of other people too.
 
 - File a bug report for something that's not a bug. [Feature requests][requests] and [questions][questions] have their own dedicated areas.
 
-### :white_check_mark: Do
+#### :white_check_mark: Do
 
 - Double-check if a bug has [already been reported][bugs] before you open a new issue.
 
@@ -33,15 +25,18 @@ That being said, zshclock has just a few things for you to keep in mind if you d
 
 - Update your bug report if you find a workaround. Even if it doesn't fix the root issue, it'll likely help anyone else who stumbles upon your report.
 
-## Feature Requests :bulb:
+</details>
 
-### :x: Don't
+<details>
+<summary>Feature Requests :bulb:</summary>
 
-- Submit, like, a jabillion requests. Look, as a serial idea-haver, I totally get it, but at the same time, I only have so many things I can work on at once, you know?
+#### :x: Don't
+
+- Submit, like, a jabillion requests. As a serial idea-haver, I totally get it, but at the same time, I only have so many things I can work on at once, you know?
 
 - Complain if your request is rejected. There could be any number of reasons why a feature is bad for zshclock.
 
-### :white_check_mark: Do
+#### :white_check_mark: Do
 
 - Check if someone's [already thought of your awesome idea][requests] before you submit a new request.
 
@@ -49,15 +44,18 @@ That being said, zshclock has just a few things for you to keep in mind if you d
 
     - If you're feeling extra adventurous, [try taking a crack at the codebase][fork]. Your implementation of a feature doesn't have to be perfect, but requests with code examples or linked PRs are far more likely to be accepted.
 
-## Code Contributions :recycle:
+</details>
 
-### :x: Don't
+<details>
+<summary>Code Contributions :recycle:</summary>
+
+#### :x: Don't
 
 - Submit skinny, cosmetic-only pull requests. If all you're changing is whitespace, formatting, and variable names, it'll probably get rejected.
 
 - Add malware to zshclock. I will cry.
 
-### :white_check_mark: Do
+#### :white_check_mark: Do
 
 - Make your pull requests detailed. Why does it exist? What issue(s) does it address? What is the intended goal of your code? How many ways can I ask the same question without making it obvious?
 
@@ -71,7 +69,7 @@ That being said, zshclock has just a few things for you to keep in mind if you d
 
 - Follow zshclock's [style guide][style]. Code is easier to understand when it's easier to read.
 
----
+</details>
 
 Don't overthink it.
 If your contribution is made in good faith and doesn't break anything, in all likelihood it'll be accepted.
@@ -86,3 +84,4 @@ zshclock eagerly awaits its next improvement from you ♥
 [bugs]:      https://github.com/tenault/zshclock/issues?q=is%3Aissue%20state%3Aopen%20label%3Abug
 [fork]:      https://github.com/tenault/zshclock/fork
 [style]:     https://github.com/tenault/zshclock/wiki/Style-Guide
+

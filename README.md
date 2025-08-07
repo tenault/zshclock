@@ -15,8 +15,8 @@
 > [!WARNING]
 > _zshclock is in active development! Functionality is limited, and features may appear and disappear without warning._
 > _Please wait patiently for the 1.0 release, or until the banner color switches from orange to purple._
-> 
-> <sub>Curious eyeball-havers are encouraged to checkout the [`evolution`](https://github.com/tenault/zshclock/tree/evolution) branch and [zshclock project board](https://github.com/users/tenault/projects/3) to see what's coming up.</sub>
+>
+> <sub>Curious eyeball-havers are encouraged to checkout the [`evolution`](https://github.com/tenault/zshclock/tree/evolution) branch and corresponding [project board](https://github.com/users/tenault/projects/3) to track current development.</sub>
 
 <img width="1018" height="595" alt="screenshot" src="https://github.com/user-attachments/assets/7c650712-aec6-4602-aa60-22e2c04250d5" />
 
@@ -26,6 +26,7 @@
 - [About](#about)
 - [Installation](#installation)
 - [Usage](#usage)
+- [Contributing](#contributing-)
 - [Acknowledgements](#acknowledgements)
 
 </details>
@@ -66,13 +67,17 @@ Symbol | Meaning
 
 ## Installation
 
+| Requirements |
+| --- |
+| [zsh](https://www.zsh.org/) _(obviously)_ |
+
 ### Step 1: Get zshclock
 
 If you have git installed, simply open your favorite terminal and run:
 ```zsh
 git clone https://github.com/tenault/zshclock.git
 ```
-<sup>_Alternatively, [download](https://github.com/tenault/zshclock/releases/tag/v0.2) the latest version._</sup>
+<sup>_Alternatively, [download](https://github.com/tenault/zshclock/releases/tag/v0.2) the latest release._</sup>
 
 ### Step 2: Activate zshclock
 
@@ -107,7 +112,7 @@ rm -r ~/zshclock                               # Optional, removes the source fo
 ```zsh
 rm ~/.local/bin/ztc
 ```
-<sup>To undo the local bin folder entirely, delete `~/.local/bin` and remove the `path+=...` line in `~/.zshrc`</sup>
+<sup>To remove the local bin folder entirely, delete `~/.local/bin` and remove the `path+=...` line in `~/.zshrc`</sup>
 
 </details>
 
@@ -134,10 +139,18 @@ The `date` command lets you change the text under the clock to anything you want
 date %a @b%b %d@r %p
 ```
 <sup>_The symbols `@b` and `@r` in the above example are a special type of expansion unique to zshclock, called [flares](https://github.com/tenault/zshclock/wiki/Flaring)_</sup> \
-<sup>_For a complete list of available expansions, check the wiki on [date formatting](https://github.com/tenault/zshclock/wiki/Date-Formatting)_</sup>
+<sup>_For a complete list of available expansions, refer to the wiki on [date formatting](https://github.com/tenault/zshclock/wiki/Date-Formatting)_</sup>
 
-For a complete guide on using zshclock, including a list of available commands, check the wiki on [usage](https://github.com/tenault/zshclock/wiki/Usage)
+For a complete guide on using zshclock, including a list of available commands, refer to the wiki on [usage](https://github.com/tenault/zshclock/wiki/Usage)
+
+## Contributing ♥
+
+zshclock welcomes any and all contributions, so long as they adhere to the guidelines set forth in [Contributing](.github/CONTRIBUTING.md).
+Contributors are highly encouraged to glance over them before submitting their first contribution.
+
+Additionally, zshclock is governed by the [Code of Bill and Ted](.github/CODE_OF_CONDUCT.md), and as such, all contributors are expected to follow its rules without exception.
 
 ## Acknowledgements
 
 zshclock is proudly forked from  [octobanana/peaclock](https://github.com/octobanana/peaclock) ♥
+
