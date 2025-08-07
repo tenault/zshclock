@@ -929,14 +929,11 @@ function ztc:parse { # delegate command to correct parser
             _ztcps_list+=("@u$_ztcps_command@r")
         done
 
-        ztc:commander:leave "@i Usage: date <format> @n @n Arguments: @n     format    An strftime-compatible string to format the date. @r"
-        # ztc:commander:leave "@i Available commands: ${(j:@i, :)_ztcps_list}@i @r"
+        ztc:commander:leave "@i Available commands: ${(j:@i, :)_ztcps_list}@i @r"
     fi
 }
 
 function ztc:parse:date {
-    local _ztcpsd_usage="@i Usage: date <format> @n@n Arguments: @n     format    @r"
-
     local _ztcpsd_format=${(j: :)@}
     ztc[:date:format]=${_ztcpsd_format:-"%a %b %d %p"}
     ztc:cycle date
