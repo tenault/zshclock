@@ -1,0 +1,10 @@
+---
+blank_issues_enabled: false
+contact_links:
+  - name: Feature Request
+    url: https://github.com/tenault/zshclock/discussions/new?category=feature-request
+    about: Suggest an improvement to zshclock.
+  - name: Question
+    url: https://github.com/tenault/zshclock/discussions/new?category=questions
+    about: Have a question? Ask it here!
+...

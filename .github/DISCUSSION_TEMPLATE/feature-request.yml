@@ -1,36 +1,44 @@
+---
 body:
   - type: markdown
     attributes:
-      value: |
-        Thanks for wanting to improve zshclock!
-        Fill out this form to submit a feature request!
+        value: |
+            Thanks for wanting to improve zshclock! Choose a descriptive title and fill out this form to submit your feature request!
   - type: textarea
-    id: feature
+    id: suggestion
     attributes:
-      label: "What would you like to see zshclock add, change, remove, or improve?"
-      placeholder: |
-        Add bees. Add lots of bees. This clock doesn't have enough bees, and let me tell you, I freakin' LOVE bees, man.
+        label: "Suggestion"
+        description: "What would you like to see zshclock add, change, remove, or improve?"
+        placeholder: |
+            Add bees. Add lots of bees. The clock doesn't have enough bees, and lemme tell you, I goddamn LOVE bees.
     validations:
-      required: true
+        required: true
   - type: textarea
-    id: benefit
+    id: reason
     attributes:
-      label: "How would zshclock and/or its users benefit from this suggestion?"
-      placeholder: |
-        Bees are, like, really good for the environment? If zshclock had bees, it would definitely be more awesome. Plus, the clock could finally pollinate itself.
+        label: "Reason"
+        description: "Why should zshclock consider this suggestion?"
+        placeholder: |
+            Bees are, like, really good for the environment? If zshclock had bees, it would definitely be more awesome. Plus, the clock could finally pollinate itself.
     validations:
-      required: true
+        required: true
   - type: textarea
-    id: additionals
+    id: extras
     attributes:
-      label: "Is there anything else you'd like to add to this feature request? Context, history, examples, etc."
-      placeholder: |
-        The bee was invented forever ago, and is standardized in most countries. There's over a bajillion different kinds.
-
-        I'm not particular what kind of bee zshclock adds. Any kind would do, so long as there's lots of them. Please. And thank you.
+        label: "Extras"
+        description: "Is there anything else you'd like to add? Context, history, images, code examples, etc."
+        placeholder: |
+            I'm not really particular on what kind of bee zshclock adds. There's, like, a jabillion different kinds, and any of them would do, so long as there's lots and lots. Please. And thank you.
+    validations:
+        required: false
   - type: checkboxes
+    id: acknowledgement
     attributes:
-      label: "Almost done! Check the box and hit the button to officially submit your request!"
-      options:
-        - label: "I understand this form is only a request, and that there's no guarantee this feature will ever be added."
-          required: true
+        label: "Acknowledgement"
+        description: "This form is only a request, and in no way guarantees this feature will be added."
+        options:
+          - label: "I understand"
+            required: true
+          - label: "I will abide by the [Code of Bill and Ted](https://github.com/tenault/zshclock/.github/CODE_OF_CONDUCT.md)"
+            required: true
+...

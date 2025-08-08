@@ -1,7 +1,58 @@
 <!-- SPDX-ID : MPL-2.0 -->
 
-###### Version 2.0
-# Mozilla Public License
+<details>
+<summary>Table of Contents</summary>
+
+- [Mozilla Public License 2.0][#]
+  - [1. Definitions][1]
+    - [1.1. Contributor][1.1]
+    - [1.2. Contributor Version][1.2]
+    - [1.3. Contribution][1.3]
+    - [1.4. Covered Software][1.4]
+    - [1.5. Incompatible With Secondary Licenses][1.5]
+    - [1.6. Executable Form][1.6]
+    - [1.7. Larger Work][1.7]
+    - [1.8. License][1.8]
+    - [1.9. Licensable][1.9]
+    - [1.10. Modifications][1.10]
+    - [1.11. Patent Claims of a Contributor][1.11]
+    - [1.12. Secondary License][1.12]
+    - [1.13. Source Code Form][1.13]
+    - [1.14. You (or Your)][1.14]
+  - [2. License Grants and Conditions][2]
+    - [2.1. Grants][2.1]
+    - [2.2. Effective Date][2.2]
+    - [2.3. Limitations on Grant Scope][2.3]
+    - [2.4. Subsequent Licenses][2.4]
+    - [2.5. Representation][2.5]
+    - [2.6. Fair Use][2.6]
+    - [2.7. Conditions][2.7]
+  - [3. Responsibilities][3]
+    - [3.1. Distribution of Source Form][3.1]
+    - [3.2. Distribution of Executable Form][3.2]
+    - [3.3. Distribution of a Larger Work][3.3]
+    - [3.4. Notices][3.4]
+    - [3.5. Application of Additional Terms][3.5]
+  - [4. Inability to Comply Due to Statute or Regulation][4]
+  - [5. Termination][5]
+    - [5.1][5.1]
+    - [5.2][5.2]
+    - [5.3][5.3]
+  - [6. Disclaimer of Warranty][6]
+  - [7. Limitation of Liability][7]
+  - [8. Litigation][8]
+  - [9. Miscellaneous][9]
+  - [10. Versions of the License][10]
+    - [10.1. New Versions][10.1]
+    - [10.2. Effect of New Versions][10.2]
+    - [10.3. Modified Versions][10.3]
+    - [10.4. Distributing Source Code Form that is Incompatible With Secondary Licenses][10.4]
+- [Exhibit A — Source Code Form License Notice][A]
+- [Exhibit B — Incompatible With Secondary Licenses Notice][B]
+
+</details>
+
+# Mozilla Public License 2.0
 
 ### 1. Definitions
 
@@ -71,20 +122,19 @@ Each Contributor hereby grants You a world-wide, royalty-free, non-exclusive lic
 
 <ol type="a">
     <li><p>under intellectual property rights (other than patent or trademark) Licensable by such Contributor to use, reproduce, make available, modify, display, perform, distribute, and otherwise exploit its Contributions, either on an unmodified basis, with Modifications, or as part of a Larger Work; and</p></li>
-    <a name="21b"></a>
     <li><p>under Patent Claims of such Contributor to make, use, sell, offer for sale, have made, import, and otherwise transfer either its Contributions or its Contributor Version.</p></li>
 </ol>
 
 #### 2.2. Effective Date
 
-The licenses granted in [Section 2.1](#21-grants) with respect to any Contribution become effective for each Contribution on the date the Contributor first distributes such Contribution.
+The licenses granted in [Section 2.1][2.1] with respect to any Contribution become effective for each Contribution on the date the Contributor first distributes such Contribution.
 
 #### 2.3. Limitations on Grant Scope
 
-The licenses granted in this [Section 2](#2-license-grants-and-conditions) are the only rights granted under this License.
+The licenses granted in this [Section 2][2] are the only rights granted under this License.
 No additional rights or licenses will be implied from the distribution or licensing of Covered Software under this License.
 
-Notwithstanding [Section 2.1(b)](#21b) above, no patent license is granted by a Contributor:
+Notwithstanding [Section 2.1(b)][2.1] above, no patent license is granted by a Contributor:
 
 <ol type="a">
     <li><p>for any code that a Contributor has removed from Covered Software; or</p></li>
@@ -101,11 +151,11 @@ Notwithstanding [Section 2.1(b)](#21b) above, no patent license is granted by a 
 </ol>
 
 > [!NOTE]
-> This License does not grant any rights in the trademarks, service marks, or logos of any Contributor (except as may be necessary to comply with the notice requirements in [Section 3.4](#34-notices)).
+> This License does not grant any rights in the trademarks, service marks, or logos of any Contributor (except as may be necessary to comply with the notice requirements in [Section 3.4][3.4]).
 
 #### 2.4. Subsequent Licenses
 
-No Contributor makes additional grants as a result of Your choice to distribute the Covered Software under a subsequent version of this License (see [Section 10.2](#102-effect-of-new-versions)) or under the terms of a Secondary License (if permitted under the terms of [Section 3.3](#33-distribution-of-a-larger-work)).
+No Contributor makes additional grants as a result of Your choice to distribute the Covered Software under a subsequent version of this License (see [Section 10.2][10.2]) or under the terms of a Secondary License (if permitted under the terms of [Section 3.3][3.3]).
 
 #### 2.5. Representation
 
@@ -117,7 +167,7 @@ This License is not intended to limit any rights You have under applicable copyr
 
 #### 2.7. Conditions
 
-[Sections 3.1](#31-distribution-of-source-form), [3.2](#32-distribution-of-executable-form), [3.3](#33-distribution-of-a-larger-work), and [3.4](#34-notices) are conditions of the licenses granted in [Section 2.1](#21-grants).
+[Sections 3.1][3.1], [3.2][3.2], [3.3][3.3], and [3.4][3.4] are conditions of the licenses granted in [Section 2.1][2.1].
 
 ---
 
@@ -195,11 +245,11 @@ Moreover, Your grants from a particular Contributor are reinstated on an ongoing
 
 #### 5.2.
 
-If You initiate litigation against any entity by asserting a patent infringement claim (excluding declaratory judgment actions, counter-claims, and cross-claims) alleging that a Contributor Version directly or indirectly infringes any patent, then the rights granted to You by any and all Contributors for the Covered Software under [Section 2.1](#21-grants) of this License shall terminate.
+If You initiate litigation against any entity by asserting a patent infringement claim (excluding declaratory judgment actions, counter-claims, and cross-claims) alleging that a Contributor Version directly or indirectly infringes any patent, then the rights granted to You by any and all Contributors for the Covered Software under [Section 2.1][2.1] of this License shall terminate.
 
 #### 5.3.
 
-In the event of termination under [Sections 5.1](#51) or [5.2](#52) above, all end user license agreements (excluding distributors and resellers) which have been validly granted by You or Your distributors under this License prior to termination shall survive termination.
+In the event of termination under [Sections 5.1][5.1] or [5.2][5.2] above, all end user license agreements (excluding distributors and resellers) which have been validly granted by You or Your distributors under this License prior to termination shall survive termination.
 
 ---
 
@@ -247,7 +297,7 @@ Any law or regulation which provides that the language of a contract shall be co
 
 #### 10.1. New Versions
 
-Mozilla Foundation is the license steward. Except as provided in [Section 10.3](#103-modified-versions), no one other than the license steward has the right to modify or publish new versions of this License.
+Mozilla Foundation is the license steward. Except as provided in [Section 10.3][10.3], no one other than the license steward has the right to modify or publish new versions of this License.
 Each version will be given a distinguishing version number.
 
 #### 10.2. Effect of New Versions
@@ -260,7 +310,7 @@ If you create software not governed by this License, and you want to create a ne
 
 #### 10.4. Distributing Source Code Form that is Incompatible With Secondary Licenses
 
-If You choose to distribute Source Code Form that is Incompatible With Secondary Licenses under the terms of this version of the License, the notice described in [Exhibit B](#exhibit-b--incompatible-with-secondary-licenses-notice) of this License must be attached.
+If You choose to distribute Source Code Form that is Incompatible With Secondary Licenses under the terms of this version of the License, the notice described in [Exhibit B][B] of this License must be attached.
 
 ## Exhibit A — Source Code Form License Notice
 
@@ -281,3 +331,50 @@ You may add additional accurate notices of copyright ownership.
 This Source Code Form is "Incompatible With Secondary Licenses", as
 defined by the Mozilla Public License, v. 2.0
 ```
+
+[#]: #mozilla-public-license-20
+[1]: #1-definitions
+[1.1]: #11-contributor
+[1.2]: #12-contributor-version
+[1.3]: #13-contribution
+[1.4]: #14-covered-software
+[1.5]: #15-incompatible-with-secondary-licenses
+[1.6]: #16-executable-form
+[1.7]: #17-larger-work
+[1.8]: #18-license
+[1.9]: #19-licensable
+[1.10]: #110-modifications
+[1.11]: #111-patent-claims-of-a-contributor
+[1.12]: #112-secondary-license
+[1.13]: #113-source-code-form
+[1.14]: #114-you-or-your
+[2]: #2-license-grants-and-conditions
+[2.1]: #21-grants
+[2.2]: #22-effective-date
+[2.3]: #23-limitations-on-grant-scope
+[2.4]: #24-subsequent-licenses
+[2.5]: #25-representation
+[2.6]: #26-fair-use
+[2.7]: #27-conditions
+[3]: #3-responsibilities
+[3.1]: #31-distribution-of-source-form
+[3.2]: #32-distribution-of-executable-form
+[3.3]: #33-distribution-of-a-larger-work
+[3.4]: #34-notices
+[3.5]: #35-application-of-additional-terms
+[4]: #4-inability-to-comply-due-to-statute-or-regulation
+[5]: #5-termination
+[5.1]: #51
+[5.2]: #52
+[5.3]: #53
+[6]: #6-disclaimer-of-warranty
+[7]: #7-limitation-of-liability
+[8]: #8-litigation
+[9]: #9-miscellaneous
+[10]: #10-versions-of-the-license
+[10.1]: #101-new-versions
+[10.2]: #102-effect-of-new-versions
+[10.3]: #103-modified-versions
+[10.4]: #104-distributing-source-code-form-that-is-incompatible-with-secondary-licenses
+[A]: #exhibit-a--source-code-form-license-notice
+[B]: #exhibit-b--incompatible-with-secondary-licenses-notice
