@@ -100,7 +100,7 @@ body:
         options:
           - label: "I agree"
             required: true
-          - label: "I [checked for similar bugs](https://github.com/tenault/zshclock/issues?q=is%3Aissue%20state%3Aopen%20label%3Abug) and found none."
+          - label: "I [checked for similar bugs](https://github.com/tenault/zshclock/issues?q=is%3Aissue%20state%3Aopen%20label%3Abug) and found none"
             required: true
           - label: "I will abide by the [Code of Bill and Ted](https://github.com/tenault/zshclock/.github/CODE_OF_CONDUCT.md)"
 ...
