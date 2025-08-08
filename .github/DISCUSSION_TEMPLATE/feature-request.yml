@@ -29,11 +29,16 @@ body:
         description: "Is there anything else you'd like to add? Context, history, images, code examples, etc."
         placeholder: |
             I'm not really particular on what kind of bee zshclock adds. There's, like, a jabillion different kinds, and any of them would do, so long as there's lots and lots. Please. And thank you.
+    validations:
+        required: false
   - type: checkboxes
+    id: acknowledgement
     attributes:
         label: "Acknowledgement"
         description: "This form is only a request, and in no way guarantees this feature will be added."
         options:
           - label: "I understand"
+            required: true
+          - label: "I will abide by the [Code of Bill and Ted](https://github.com/tenault/zshclock/.github/CODE_OF_CONDUCT.md)"
             required: true
 ...

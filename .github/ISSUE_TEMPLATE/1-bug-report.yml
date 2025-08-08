@@ -1,0 +1,106 @@
+---
+name: Bug Report
+description: Call attention to something broken.
+labels: ["bug"]
+projects: ["tenault/3"]
+assignees:
+  - tenault
+body:
+  - type: markdown
+    attributes:
+        value: |
+            Thanks for helping improve zshclock! Choose a descriptive title and fill out this form to submit your bug.
+            ## Environment
+  - type: dropdown
+    id: os
+    attributes:
+        label: "OS"
+        description: "What operating system are you using?"
+        options:
+          - macOS
+          - Linux
+          - Other
+        default: 0
+    validations:
+        required: true
+  - type: dropdown
+    id: terminal
+    attributes:
+        label: "Terminal"
+        description: "What kind of terminal are you using? If you have multiple, select all that the bug appears in."
+        multiple: true
+        options:
+          - Terminal (macOS)
+          - kitty
+          - Other
+        default: 0
+    validations:
+        required: true
+  - type: input
+    id: specify
+    attributes:
+        label: "Specify"
+        description: "If you selected Other to either question above, please specify what you're using. If you selected Linux as your operating system, please specify your distro (Ubuntu, Debian, Arch, Fedora, Gentoo, etc)."
+        placeholder: "e.g. Linux Mint + cool-retro-term"
+  - type: markdown
+    attributes:
+        value: |
+            ## Report
+    validations:
+        required: false
+  - type: textarea
+    id: problem
+    attributes:
+        label: "Problem"
+        description: "What went wrong or fell apart? Include screenshots if you have any."
+        placeholder: |
+            When I press the gas and brake pedals at the same time, my car moans.
+    validations:
+        required: true
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+        label: "Steps to Reproduce"
+        description: "Be as detailed as possible. How did you encounter this bug? If the bug is sporadic or unpredictable, mention that too."
+        placeholder: |
+            Well, I got in my car as usual (from the driver-side door) and sat down. I put on my seatbelt, and then put my right foot on the gas pedal, and my left foot on the brake. I turned the ignition key with my right hand, and the car started normally. I then immediately slammed both feet down as hard as I could, and that's when my car moaned.
+    validations:
+        required: true
+  - type: textarea
+    id: expectation
+    attributes:
+        label: "Expectation"
+        description: "What did you expect to happen instead?"
+        placeholder: |
+            I expected my car to take a screenshot, like it always does. Duh.
+    validations:
+        required: true
+  - type: textarea
+    id: additional-info
+    attributes:
+        label: "Additional Info"
+        description: "Is there anything else you'd like to add? Context, relevant info, unique circumstances?"
+        placeholder: |
+            The car's got racing stripes, if that helps. Oh, and the moan sounded... toothy.
+    validations:
+        required: false
+  - type: input
+    id: codename
+    attributes:
+        label: "Codename"
+        description: "Optionally, designate a unique and creative name for your bug."
+        placeholder: "Moaning Myrtle"
+    validations:
+        required: false
+  - type: checkboxes
+    id: acknowledgement
+    attributes:
+        label: "Acknowledgement"
+        description: "This bug report adheres to zshclock's [contributing guidelines](https://github.com/tenault/zshclock/.github/CONTRIBUTING.md)"
+        options:
+          - label: "I agree"
+            required: true
+          - label: "I [checked for similar bugs](https://github.com/tenault/zshclock/issues?q=is%3Aissue%20state%3Aopen%20label%3Abug) and found none."
+            required: true
+          - label: "I will abide by the [Code of Bill and Ted](https://github.com/tenault/zshclock/.github/CODE_OF_CONDUCT.md)"
+...
