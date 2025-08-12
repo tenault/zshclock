@@ -152,5 +152,6 @@ Additionally, zshclock is governed by the [Code of Bill and Ted](.github/CODE_OF
 
 ## Acknowledgements
 
-zshclock is proudly forked from  [octobanana/peaclock](https://github.com/octobanana/peaclock) ♥
+zshclock is proudly forked from [octobanana/peaclock](https://github.com/octobanana/peaclock) ♥
 
+<sup>Wordmark based on [Nancyj](https://patorjk.com/software/taag/#p=display&f=Nancyj&t=zshclock) from [patorjk](https://patorjk.com)</sup>

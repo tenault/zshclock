@@ -39,6 +39,6 @@ body:
         options:
           - label: "I understand"
             required: true
-          - label: "I will abide by the [Code of Bill and Ted](https://github.com/tenault/zshclock/.github/CODE_OF_CONDUCT.md)"
+          - label: "I will abide by the [Code of Bill and Ted](https://github.com/tenault/zshclock/blob/main/.github/CODE_OF_CONDUCT.md)"
             required: true
 ...

@@ -27,21 +27,22 @@ body:
     id: terminal
     attributes:
         label: "Terminal"
-        description: "What kind of terminal are you using? If you have multiple, select all that the bug appears in."
+        description: "What terminal are you using? If you have multiple, then select each one the bug appears in."
         multiple: true
         options:
           - Terminal (macOS)
           - kitty
           - Other
-        default: 0
     validations:
         required: true
   - type: input
-    id: specify
+    id: specifics
     attributes:
-        label: "Specify"
-        description: "If you selected Other to either question above, please specify what you're using. If you selected Linux as your operating system, please specify your distro (Ubuntu, Debian, Arch, Fedora, Gentoo, etc)."
+        label: "Specifics"
+        description: "If you selected Other to either question above, please specify what you're using. If you selected Linux as your operating system, please name your distro (Ubuntu, Debian, Arch, Fedora, Gentoo, etc)."
         placeholder: "e.g. Linux Mint + cool-retro-term"
+    validations:
+        required: false
   - type: markdown
     attributes:
         value: |
@@ -79,7 +80,7 @@ body:
     id: additional-info
     attributes:
         label: "Additional Info"
-        description: "Is there anything else you'd like to add? Context, relevant info, unique circumstances?"
+        description: "Is there anything else you'd like to add? Context, relevant info, and/or unique circumstances?"
         placeholder: |
             The car's got racing stripes, if that helps. Oh, and the moan sounded... toothy.
     validations:
@@ -96,11 +97,12 @@ body:
     id: acknowledgement
     attributes:
         label: "Acknowledgement"
-        description: "This bug report adheres to zshclock's [contributing guidelines](https://github.com/tenault/zshclock/.github/CONTRIBUTING.md)"
+        description: "This bug report is governed by zshclock's [contributing guidelines](https://github.com/tenault/zshclock/blob/main/.github/CONTRIBUTING.md)"
         options:
-          - label: "I agree"
+          - label: "I understand"
             required: true
           - label: "I [checked for similar bugs](https://github.com/tenault/zshclock/issues?q=is%3Aissue%20state%3Aopen%20label%3Abug) and found none"
             required: true
-          - label: "I will abide by the [Code of Bill and Ted](https://github.com/tenault/zshclock/.github/CODE_OF_CONDUCT.md)"
+          - label: "I will abide by the [Code of Bill and Ted](https://github.com/tenault/zshclock/blob/main/.github/CODE_OF_CONDUCT.md)"
+            required: true
 ...
