@@ -27,45 +27,79 @@
 # ┃ └────────────────────────────────────────────────────────────────────────────────────────────┘ ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-source cradle/constants.zsh
-source cradle/plonk.zsh
-source cradle/ztc.zsh
+# ┌────────────────────────────────┐┌─────────────┐┌╴╴╴╴╴╴╴╴╴╴╴╴╴╴╴┐
+# │ ░░▒▒▓▓██  COMPONENTS  ██▓▓▒▒░░ ││    FACES    │╎    DIGITAL    ╎
+# └────────────────────────────────┘└─────────────┘└╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶┘
 
-source cradle/cassettes/commander.zsh
-source cradle/cassettes/ztc.zsh
+# ┌─────────────┐
+# │    order    │
+# └─────────────┘
 
-source cradle/components/commander.zsh
-source cradle/components/date.zsh
-source cradle/components/faces/digital.zsh
+function ztc:component:order:face:digital {
+    ztc[face:digital:y]=:auto
+    ztc[face:digital:x]=:auto
+    ztc[face:digital:h]=:auto
+    ztc[face:digital:w]=:auto
 
-source cradle/engines/commander.zsh
-source cradle/engines/painter.zsh
-source cradle/engines/parser.zsh
-source cradle/engines/text.zsh
-
-source cradle/gizmos/hoarder.zsh
-source cradle/gizmos/poet.zsh
-source cradle/gizmos/weaver.zsh
-
-
-# ┌──────────────────────────────┐
-# │ ░░▒▒▓▓██  DIRECTOR  ██▓▓▒▒░░ │
-# └──────────────────────────────┘
-
-function zsh_that_clock {
-    trap 'ztc:core:clean 1' INT
-
-    stty dsusp undef   # frees ^Y
-    stty discard undef # frees ^O
-
-    zmodload zsh/datetime
-
-    typeset -A ztc=()
-
-    ztc:plonk              # set config + init
-    ztc:core:write $ZTC_INIT    # allocate screen space
-    ztc:core:build && ztc:core:drive # zsh the clock!
-    ztc:core:clean              # cleanup
+    ztc[face:digital:data:format]=masked
 }
 
-zsh_that_clock
+
+# ┌─────────────┐
+# │    alter    │
+# └─────────────┘
+
+function ztc:component:alter:face:digital {
+
+    # ───── get time + setup ─────
+
+    local _ztcafd_time=''
+    strftime -s _ztcafd_time "%l:%M:%S"
+
+    local _ztcafd_mask=()
+    local _ztcafd_staged=()
+
+
+    # ───── create mask ─────
+
+    for _ztcafd_character in ${(s::)_ztcafd_time}; do
+        case $_ztcafd_character in
+            (0) _ztcafd_mask=(111 101 101 101 111) ;;
+            (1) _ztcafd_mask=(001 001 001 001 001) ;;
+            (2) _ztcafd_mask=(111 001 111 100 111) ;;
+            (3) _ztcafd_mask=(111 001 111 001 111) ;;
+            (4) _ztcafd_mask=(101 101 111 001 001) ;;
+            (5) _ztcafd_mask=(111 100 111 001 111) ;;
+            (6) _ztcafd_mask=(111 100 111 101 111) ;;
+            (7) _ztcafd_mask=(111 001 001 001 001) ;;
+            (8) _ztcafd_mask=(111 101 111 101 111) ;;
+            (9) _ztcafd_mask=(111 101 111 001 111) ;;
+            (:) _ztcafd_mask=( 0   1   0   1   0 ) ;;
+        esac
+
+        _ztcafd_staged+=(${(j:@n:)_ztcafd_mask})
+    done
+
+
+    # ───── set mask key ─────
+
+    local -U _ztcafd_key=()
+
+    _ztcafd_key+=('0#@r  ')
+    _ztcafd_key+=('1#@i  ')
+    _ztcafd_key+=('.#@r ')
+
+    ztc:gizmo:stash face:digital:data:key _ztcafd_key
+
+
+    # ───── interleave + flatten (with padding) ─────
+
+    ztc:gizmo:weave _ztcafd_staged
+    for _ztcafd_i in {1..${#_ztcafd_staged}}; do _ztcafd_staged[$_ztcafd_i]=${_ztcafd_staged[$_ztcafd_i]//@n/.}; done
+
+
+    # ───── save ─────
+
+    ztc:gizmo:stash face:digital:data _ztcafd_staged
+
+}

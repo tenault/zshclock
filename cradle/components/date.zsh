@@ -27,45 +27,29 @@
 # ┃ └────────────────────────────────────────────────────────────────────────────────────────────┘ ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-source cradle/constants.zsh
-source cradle/plonk.zsh
-source cradle/ztc.zsh
+# ┌────────────────────────────────┐┌────────────┐
+# │ ░░▒▒▓▓██  COMPONENTS  ██▓▓▒▒░░ ││    DATE    │
+# └────────────────────────────────┘└────────────┘
 
-source cradle/cassettes/commander.zsh
-source cradle/cassettes/ztc.zsh
+# ┌─────────────┐
+# │    order    │
+# └─────────────┘
 
-source cradle/components/commander.zsh
-source cradle/components/date.zsh
-source cradle/components/faces/digital.zsh
-
-source cradle/engines/commander.zsh
-source cradle/engines/painter.zsh
-source cradle/engines/parser.zsh
-source cradle/engines/text.zsh
-
-source cradle/gizmos/hoarder.zsh
-source cradle/gizmos/poet.zsh
-source cradle/gizmos/weaver.zsh
-
-
-# ┌──────────────────────────────┐
-# │ ░░▒▒▓▓██  DIRECTOR  ██▓▓▒▒░░ │
-# └──────────────────────────────┘
-
-function zsh_that_clock {
-    trap 'ztc:core:clean 1' INT
-
-    stty dsusp undef   # frees ^Y
-    stty discard undef # frees ^O
-
-    zmodload zsh/datetime
-
-    typeset -A ztc=()
-
-    ztc:plonk              # set config + init
-    ztc:core:write $ZTC_INIT    # allocate screen space
-    ztc:core:build && ztc:core:drive # zsh the clock!
-    ztc:core:clean              # cleanup
+function ztc:component:order:date {
+    ztc[date:y]=:auto
+    ztc[date:x]=:auto
+    ztc[date:h]=:auto
+    ztc[date:w]=:auto
 }
 
-zsh_that_clock
+
+# ┌─────────────┐
+# │    alter    │
+# └─────────────┘
+
+function ztc:component:alter:date {
+    local _ztcad_date=''
+    strftime -s _ztcad_date ${ztc[:date:format]//\%n/@n} # capture newlines
+
+    ztc:gizmo:stash date:data _ztcad_date
+}

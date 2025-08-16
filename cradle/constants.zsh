@@ -27,45 +27,38 @@
 # ┃ └────────────────────────────────────────────────────────────────────────────────────────────┘ ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-source cradle/constants.zsh
-source cradle/plonk.zsh
-source cradle/ztc.zsh
+# ┌───────────────────────────────┐
+# │ ░░▒▒▓▓██  CONSTANTS  ██▓▓▒▒░░ │
+# └───────────────────────────────┘
 
-source cradle/cassettes/commander.zsh
-source cradle/cassettes/ztc.zsh
+# ┌───────────────┐
+# │    general    │
+# └───────────────┘
 
-source cradle/components/commander.zsh
-source cradle/components/date.zsh
-source cradle/components/faces/digital.zsh
+ZTC_ESC="\x1b"
+ZTC_CSI=${ZTC_ESC}[
 
-source cradle/engines/commander.zsh
-source cradle/engines/painter.zsh
-source cradle/engines/parser.zsh
-source cradle/engines/text.zsh
+ZTC_INIT=${ZTC_CSI}?1049h
+ZTC_EXIT=${ZTC_CSI}?1049l
 
-source cradle/gizmos/hoarder.zsh
-source cradle/gizmos/poet.zsh
-source cradle/gizmos/weaver.zsh
+ZTC_CLEAR=${ZTC_CSI}2J
+ZTC_CLEAR_LINE=${ZTC_CSI}2K
 
 
-# ┌──────────────────────────────┐
-# │ ░░▒▒▓▓██  DIRECTOR  ██▓▓▒▒░░ │
-# └──────────────────────────────┘
+# ┌──────────────┐
+# │    cursor    │
+# └──────────────┘
 
-function zsh_that_clock {
-    trap 'ztc:core:clean 1' INT
+ZTC_CURSOR_HOME=${ZTC_CSI}H
+ZTC_CURSOR_SHOW=${ZTC_CSI}?25h
+ZTC_CURSOR_HIDE=${ZTC_CSI}?25l
 
-    stty dsusp undef   # frees ^Y
-    stty discard undef # frees ^O
 
-    zmodload zsh/datetime
+# ┌────────────┐
+# │    text    │
+# └────────────┘
 
-    typeset -A ztc=()
-
-    ztc:plonk              # set config + init
-    ztc:core:write $ZTC_INIT    # allocate screen space
-    ztc:core:build && ztc:core:drive # zsh the clock!
-    ztc:core:clean              # cleanup
-}
-
-zsh_that_clock
+ZTC_TEXT_RESET=${ZTC_CSI}0m
+ZTC_TEXT_BOLD=${ZTC_CSI}1m
+ZTC_TEXT_UNDERLINE=${ZTC_CSI}4m
+ZTC_TEXT_INVERT=${ZTC_CSI}7m

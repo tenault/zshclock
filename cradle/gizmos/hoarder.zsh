@@ -27,45 +27,89 @@
 # ┃ └────────────────────────────────────────────────────────────────────────────────────────────┘ ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-source cradle/constants.zsh
-source cradle/plonk.zsh
-source cradle/ztc.zsh
+# ┌────────────────────────────┐┌───────────────┐
+# │ ░░▒▒▓▓██  GIZMOS  ██▓▓▒▒░░ ││    HOARDER    │
+# └────────────────────────────┘└───────────────┘
 
-source cradle/cassettes/commander.zsh
-source cradle/cassettes/ztc.zsh
+# ┌─────────────┐
+# │    stash    │
+# └─────────────┘
 
-source cradle/components/commander.zsh
-source cradle/components/date.zsh
-source cradle/components/faces/digital.zsh
+function ztc:gizmo:stash { # escape flares + flatten array for storage
 
-source cradle/engines/commander.zsh
-source cradle/engines/painter.zsh
-source cradle/engines/parser.zsh
-source cradle/engines/text.zsh
+    # ───── import ─────
 
-source cradle/gizmos/hoarder.zsh
-source cradle/gizmos/poet.zsh
-source cradle/gizmos/weaver.zsh
+    local _ztcst_pouch=(${(AP)2})
 
 
-# ┌──────────────────────────────┐
-# │ ░░▒▒▓▓██  DIRECTOR  ██▓▓▒▒░░ │
-# └──────────────────────────────┘
+    # ───── build stash ─────
 
-function zsh_that_clock {
-    trap 'ztc:core:clean 1' INT
+    local _ztcst_stash=()
 
-    stty dsusp undef   # frees ^Y
-    stty discard undef # frees ^O
+    for _ztcst_jewel in $_ztcst_pouch; do
 
-    zmodload zsh/datetime
+        # ╶╶╶╶╶ escape `@@` + split by `@n` ╴╴╴╴╴
 
-    typeset -A ztc=()
+        local _ztcst_shiny=(${(As:@n:)_ztcst_jewel//@@/@\(@\)})
 
-    ztc:plonk              # set config + init
-    ztc:core:write $ZTC_INIT    # allocate screen space
-    ztc:core:build && ztc:core:drive # zsh the clock!
-    ztc:core:clean              # cleanup
+        # ╶╶╶╶╶ escape `@` + add to stash ╴╴╴╴╴
+
+        for _ztcst_i in {1..${#_ztcst_shiny}}; do _ztcst_shiny[$_ztcst_i]=${_ztcst_shiny[$_ztcst_i]//@/@@}; done
+
+        _ztcst_stash+=($_ztcst_shiny)
+
+    done
+
+
+    # ───── export ─────
+
+    ztc[$1]=${(j:@n:)_ztcst_stash//@@\(@@\)/@\(@\)} # reduce `@@(@@)` into `@(@)`
+
 }
 
-zsh_that_clock
+
+# ┌─────────────┐
+# │    steal    │
+# └─────────────┘
+
+function ztc:gizmo:steal { # retrieve flattened array + undo flare escapement
+
+    # ───── import ─────
+
+    local _ztcst_stash=(${(As:@@:)ztc[$1]})
+
+
+    # ───── steal stash ─────
+
+    local _ztcst_theft=()
+    local _ztcst_prior=''
+
+    if [[ ${ztc[$1]:0:2} == '@@' ]]; then _ztcst_prior='@ '; fi # preserve leading `@`
+
+    for _ztcst_jewel in $_ztcst_stash; do
+
+        # ╶╶╶╶╶ split by `@n` ╴╴╴╴╴
+
+        local _ztcst_shiny=(${(As:@n:)_ztcst_jewel})
+
+        # ╶╶╶╶╶ insert escaped `@` ╴╴╴╴╴
+
+        _ztcst_prior=${_ztcst_prior:+${_ztcst_prior}@}
+        _ztcst_shiny[1]=${_ztcst_prior/#@ }$_ztcst_shiny[1] # compress `@ @` into `@`
+
+        # ╶╶╶╶╶ prep for next jewel + add to theft ╴╴╴╴╴
+
+        _ztcst_prior=$_ztcst_shiny[-1]
+        shift -p _ztcst_shiny
+
+        _ztcst_theft+=($_ztcst_shiny)
+
+    done
+
+
+    # ───── export ─────
+
+    _ztcst_theft+=($_ztcst_prior)
+    : ${(AP)2::=$_ztcst_theft}
+
+}

@@ -27,45 +27,45 @@
 # ┃ └────────────────────────────────────────────────────────────────────────────────────────────┘ ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-source cradle/constants.zsh
-source cradle/plonk.zsh
-source cradle/ztc.zsh
+# ┌────────────────────────────┐┌──────────────┐
+# │ ░░▒▒▓▓██  GIZMOS  ██▓▓▒▒░░ ││    WEAVER    │
+# └────────────────────────────┘└──────────────┘
 
-source cradle/cassettes/commander.zsh
-source cradle/cassettes/ztc.zsh
+function ztc:gizmo:weave { # ((1 1 1) (2 2 2) (3 3 3)) -> ((1 2 3) (1 2 3) (1 2 3))
 
-source cradle/components/commander.zsh
-source cradle/components/date.zsh
-source cradle/components/faces/digital.zsh
+    # ───── import ─────
 
-source cradle/engines/commander.zsh
-source cradle/engines/painter.zsh
-source cradle/engines/parser.zsh
-source cradle/engines/text.zsh
-
-source cradle/gizmos/hoarder.zsh
-source cradle/gizmos/poet.zsh
-source cradle/gizmos/weaver.zsh
+    local _ztcwv_array=(${(AP)1})
 
 
-# ┌──────────────────────────────┐
-# │ ░░▒▒▓▓██  DIRECTOR  ██▓▓▒▒░░ │
-# └──────────────────────────────┘
+    # ───── determine max sub-length ─────
 
-function zsh_that_clock {
-    trap 'ztc:core:clean 1' INT
+    integer _ztcwv_length=0
 
-    stty dsusp undef   # frees ^Y
-    stty discard undef # frees ^O
+    for _ztcwv_item in $_ztcwv_array; do
+        local _ztcwv_sub=(${(As:@n:)_ztcwv_item})
+        if (( $#_ztcwv_sub > _ztcwv_length )); then _ztcwv_length=${#_ztcwv_sub}; fi
+    done
 
-    zmodload zsh/datetime
 
-    typeset -A ztc=()
+    # ───── weave ─────
 
-    ztc:plonk              # set config + init
-    ztc:core:write $ZTC_INIT    # allocate screen space
-    ztc:core:build && ztc:core:drive # zsh the clock!
-    ztc:core:clean              # cleanup
+    local _ztcwv_weaved=()
+
+    for _ztcwv_i in {1..$_ztcwv_length}; do
+        local _ztcwv_select=()
+
+        for _ztcwv_item in $_ztcwv_array; do
+            local _ztcwv_sub=(${(As:@n:)_ztcwv_item})
+            _ztcwv_select+=($_ztcwv_sub[$_ztcwv_i])
+        done
+
+        _ztcwv_weaved+=(${(j:@n:)_ztcwv_select})
+    done
+
+
+    # ───── export ─────
+
+    : ${(AP)1::=$_ztcwv_weaved}
+
 }
-
-zsh_that_clock

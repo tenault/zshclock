@@ -27,45 +27,31 @@
 # ┃ └────────────────────────────────────────────────────────────────────────────────────────────┘ ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-source cradle/constants.zsh
-source cradle/plonk.zsh
-source cradle/ztc.zsh
+# ┌───────────────────────────────┐┌───────────┐
+# │ ░░▒▒▓▓██  CASSETTES  ██▓▓▒▒░░ ││    ZTC    │
+# └───────────────────────────────┘└───────────┘
 
-source cradle/cassettes/commander.zsh
-source cradle/cassettes/ztc.zsh
+# ┌─────────────┐
+# │    align    │
+# └─────────────┘
 
-source cradle/components/commander.zsh
-source cradle/components/date.zsh
-source cradle/components/faces/digital.zsh
+function ztc:cassette:core:align { # check for resizes + rebuild
+    LINES=
+    COLUMNS=
 
-source cradle/engines/commander.zsh
-source cradle/engines/painter.zsh
-source cradle/engines/parser.zsh
-source cradle/engines/text.zsh
-
-source cradle/gizmos/hoarder.zsh
-source cradle/gizmos/poet.zsh
-source cradle/gizmos/weaver.zsh
-
-
-# ┌──────────────────────────────┐
-# │ ░░▒▒▓▓██  DIRECTOR  ██▓▓▒▒░░ │
-# └──────────────────────────────┘
-
-function zsh_that_clock {
-    trap 'ztc:core:clean 1' INT
-
-    stty dsusp undef   # frees ^Y
-    stty discard undef # frees ^O
-
-    zmodload zsh/datetime
-
-    typeset -A ztc=()
-
-    ztc:plonk              # set config + init
-    ztc:core:write $ZTC_INIT    # allocate screen space
-    ztc:core:build && ztc:core:drive # zsh the clock!
-    ztc:core:clean              # cleanup
+    if (( LINES != ztc[vh] || COLUMNS != ztc[vw] )); then ztc:core:build; fi
 }
 
-zsh_that_clock
+
+# ┌─────────────┐
+# │    cycle    │
+# └─────────────┘
+
+function ztc:cassette:core:cycle { # update component data + repaint
+    local -U _ztccz_components=$@
+    if (( $# == 0 )); then ztc:gizmo:steal components _ztccz_components; fi
+
+    for _ztccz_name in $_ztccz_components; do ztc:component:alter:$_ztccz_name; done
+
+    ztc:engine:paint $@
+}
