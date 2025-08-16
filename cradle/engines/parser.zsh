@@ -27,45 +27,55 @@
 # ┃ └────────────────────────────────────────────────────────────────────────────────────────────┘ ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-source cradle/constants.zsh
-source cradle/plonk.zsh
-source cradle/ztc.zsh
+# ┌─────────────────────────────┐┌──────────────┐
+# │ ░░▒▒▓▓██  ENGINES  ██▓▓▒▒░░ ││    PARSER    │
+# └─────────────────────────────┘└──────────────┘
 
-source cradle/cassettes/commander.zsh
-source cradle/cassettes/ztc.zsh
+# ┌───────────────┐
+# │    parsers    │
+# └───────────────┘
 
-source cradle/components/commander.zsh
-source cradle/components/date.zsh
-source cradle/components/faces/digital.zsh
-
-source cradle/engines/commander.zsh
-source cradle/engines/painter.zsh
-source cradle/engines/parser.zsh
-source cradle/engines/text.zsh
-
-source cradle/gizmos/hoarder.zsh
-source cradle/gizmos/poet.zsh
-source cradle/gizmos/weaver.zsh
-
-
-# ┌──────────────────────────────┐
-# │ ░░▒▒▓▓██  DIRECTOR  ██▓▓▒▒░░ │
-# └──────────────────────────────┘
-
-function zsh_that_clock {
-    trap 'ztc:core:clean 1' INT
-
-    stty dsusp undef   # frees ^Y
-    stty discard undef # frees ^O
-
-    zmodload zsh/datetime
-
-    typeset -A ztc=()
-
-    ztc:plonk              # set config + init
-    ztc:core:write $ZTC_INIT    # allocate screen space
-    ztc:core:build && ztc:core:drive # zsh the clock!
-    ztc:core:clean              # cleanup
+function ztc:engine:parse:date {
+    local _ztcpsd_format=${(j: :)@}
+    ztc[:date:format]=${_ztcpsd_format:-"%a %b %d %p"}
+    ztc:cassette:core:cycle date
 }
 
-zsh_that_clock
+
+# ┌─────────────┐
+# │    entry    │
+# └─────────────┘
+
+function ztc:engine:parse { # delegate command to correct parser
+    local -U _ztcps_commands=()
+    ztc:gizmo:steal :commands _ztcps_commands
+
+    if [[ -n $1 ]]; then
+        local _ztcps_input=(${(As: :)1})
+        local _ztcps_command=${(L)_ztcps_input[1]//\\/\\\\}
+
+        case $_ztcps_command in
+            (q|quit|exit)
+                ztc:core:clean
+                ;;
+            (\?)
+                # help function goes here
+                ;;
+            (*)
+                if (( _ztcps_commands[(Ie)$_ztcps_command] )); then
+                    ztc:engine:parse:$_ztcps_command ${_ztcps_input:1}
+                    ztc:cassette:commander:leave
+                else
+                    ztc:cassette:commander:leave "@i Unknown command: ${_ztcps_command//@/@@} @r"
+                fi ;;
+        esac
+    else
+        local _ztcps_list=()
+
+        for _ztcps_command in $_ztcps_commands; do
+            _ztcps_list+=("@u$_ztcps_command@r")
+        done
+
+        ztc:cassette:commander:leave "@i Available commands: ${(j:@i, :)_ztcps_list}@i @r"
+    fi
+}

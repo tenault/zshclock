@@ -27,45 +27,69 @@
 # ┃ └────────────────────────────────────────────────────────────────────────────────────────────┘ ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-source cradle/constants.zsh
-source cradle/plonk.zsh
-source cradle/ztc.zsh
+# ┌─────────────────────────────┐┌────────────┐
+# │ ░░▒▒▓▓██  ENGINES  ██▓▓▒▒░░ ││    TEXT    │
+# └─────────────────────────────┘└────────────┘
 
-source cradle/cassettes/commander.zsh
-source cradle/cassettes/ztc.zsh
+# ┌──────────────┐
+# │    flares    │
+# └──────────────┘
 
-source cradle/components/commander.zsh
-source cradle/components/date.zsh
-source cradle/components/faces/digital.zsh
-
-source cradle/engines/commander.zsh
-source cradle/engines/painter.zsh
-source cradle/engines/parser.zsh
-source cradle/engines/text.zsh
-
-source cradle/gizmos/hoarder.zsh
-source cradle/gizmos/poet.zsh
-source cradle/gizmos/weaver.zsh
+function ztc:engine:flare:newline   { : ${(P)1::=${(P)1//@\($2\)/@n}}                  }
+function ztc:engine:flare:reset     { : ${(P)1::=${(P)1//@\($2\)/$ZTC_TEXT_RESET}}     }
+function ztc:engine:flare:bold      { : ${(P)1::=${(P)1//@\($2\)/$ZTC_TEXT_BOLD}}      }
+function ztc:engine:flare:underline { : ${(P)1::=${(P)1//@\($2\)/$ZTC_TEXT_UNDERLINE}} }
+function ztc:engine:flare:invert    { : ${(P)1::=${(P)1//@\($2\)/$ZTC_TEXT_INVERT}}    }
 
 
-# ┌──────────────────────────────┐
-# │ ░░▒▒▓▓██  DIRECTOR  ██▓▓▒▒░░ │
-# └──────────────────────────────┘
+# ┌─────────────┐
+# │    entry    │
+# └─────────────┘
 
-function zsh_that_clock {
-    trap 'ztc:core:clean 1' INT
+function ztc:engine:flare { # expand `@` flares
 
-    stty dsusp undef   # frees ^Y
-    stty discard undef # frees ^O
+    # ───── import + setup ─────
 
-    zmodload zsh/datetime
+    local _ztcf_input=${(Pj:@n:)1//@@/@\(@\)} # escape `@@`
 
-    typeset -A ztc=()
+    local _ztcf_flares=()
+    ztc:gizmo:steal flares _ztcf_flares
 
-    ztc:plonk              # set config + init
-    ztc:core:write $ZTC_INIT    # allocate screen space
-    ztc:core:build && ztc:core:drive # zsh the clock!
-    ztc:core:clean              # cleanup
+    # ╶╶╶╶╶ retrieve guide ╴╴╴╴╴
+
+    local -U _ztcf_flat=()
+    local -A _ztcf_guide=()
+    ztc:gizmo:steal flares:guide _ztcf_flat
+
+    for _ztcf_item in $_ztcf_flat; do
+        local -U _ztcf_entry=(${(As:#:)_ztcf_item})
+        _ztcf_guide[$_ztcf_entry[1]]=$_ztcf_entry[2]
+    done
+
+
+    # ───── delegate flare to correct expander ─────
+
+    for _ztcf_flare in $_ztcf_flares; do
+
+        # ╶╶╶╶╶ skip flaring if out of flares ╴╴╴╴╴
+
+        if [[ ! $_ztcf_input =~ @ ]]; then break; fi
+
+        # ╶╶╶╶╶ link alias ╴╴╴╴╴
+
+        local _ztcf_alias=$_ztcf_flare
+        if (( ${${(k)_ztcf_guide}[(Ie)$_ztcf_flare]} )); then _ztcf_alias=$_ztcf_guide[$_ztcf_flare]; fi
+
+        # ╶╶╶╶╶ wrap flare + expand ╴╴╴╴╴
+
+        _ztcf_input=${_ztcf_input//@$_ztcf_flare/@\($_ztcf_flare\)}
+        ztc:engine:flare:$_ztcf_alias _ztcf_input $_ztcf_flare
+
+    done
+
+
+    # ───── export ─────
+
+    : ${(AP)2::=${(s:@n:)_ztcf_input}}
+
 }
-
-zsh_that_clock

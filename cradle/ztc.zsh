@@ -27,45 +27,73 @@
 # ┃ └────────────────────────────────────────────────────────────────────────────────────────────┘ ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-source cradle/constants.zsh
-source cradle/plonk.zsh
-source cradle/ztc.zsh
+# ┌─────────────────────────┐
+# │ ░░▒▒▓▓██  ZTC  ██▓▓▒▒░░ │
+# └─────────────────────────┘
 
-source cradle/cassettes/commander.zsh
-source cradle/cassettes/ztc.zsh
+# ┌─────────────┐
+# │    build    │
+# └─────────────┘
 
-source cradle/components/commander.zsh
-source cradle/components/date.zsh
-source cradle/components/faces/digital.zsh
+function ztc:core:build { # set view area + build components
+    ztc[vh]=$LINES
+    ztc[vw]=$COLUMNS
 
-source cradle/engines/commander.zsh
-source cradle/engines/painter.zsh
-source cradle/engines/parser.zsh
-source cradle/engines/text.zsh
+    local _ztcz_components=()
+    ztc:gizmo:steal components _ztcz_components
 
-source cradle/gizmos/hoarder.zsh
-source cradle/gizmos/poet.zsh
-source cradle/gizmos/weaver.zsh
+    for _ztcz_name in $_ztcz_components; do "ztc:component:order:$_ztcz_name"; done
 
-
-# ┌──────────────────────────────┐
-# │ ░░▒▒▓▓██  DIRECTOR  ██▓▓▒▒░░ │
-# └──────────────────────────────┘
-
-function zsh_that_clock {
-    trap 'ztc:core:clean 1' INT
-
-    stty dsusp undef   # frees ^Y
-    stty discard undef # frees ^O
-
-    zmodload zsh/datetime
-
-    typeset -A ztc=()
-
-    ztc:plonk              # set config + init
-    ztc:core:write $ZTC_INIT    # allocate screen space
-    ztc:core:build && ztc:core:drive # zsh the clock!
-    ztc:core:clean              # cleanup
+    ztc:cassette:core:cycle
 }
 
-zsh_that_clock
+
+# ┌─────────────┐
+# │    drive    │
+# └─────────────┘
+
+function ztc:core:drive { # clock go vroom vroom
+    float _ztcz_epoch=$EPOCHREALTIME
+    integer _ztcz_epsilon=0
+
+    while true; do
+        ztc:engine:input # handle inputs
+        ztc:cassette:core:align # check for resizes
+
+        # clear stale statuses
+        if [[ -n ztc[commander:status] && ${$(( (EPOCHREALTIME - ztc[commander:status:epoch]) * 1000 ))%%.*} -gt ztc[:rate:status] ]]; then ztc:cassette:commander:clear; fi
+
+        # repaint clock
+        integer _ztcz_duration=${$(( (EPOCHREALTIME - _ztcz_epoch) * 1000 ))%%.*}
+        if (( _ztcz_duration >= ( ztc[:rate:refresh] - _ztcz_epsilon ) )); then
+
+            ztc:cassette:core:cycle # update component data + repaint
+
+            _ztcz_epoch=$EPOCHREALTIME
+            _ztcz_epsilon=$(( ( _ztcz_duration - (ztc[:rate:refresh] - _ztcz_epsilon) ) % ztc[:rate:refresh] ))
+
+        fi
+    done
+}
+
+
+# ┌─────────────┐
+# │    clean    │
+# └─────────────┘
+
+function ztc:core:clean { # dissolve clock + restore terminal state
+    integer _ztcz_code=${1:-0}
+    ztc:core:write $ZTC_CURSOR_SHOW $ZTC_EXIT
+
+    stty dsusp '^Y'   # restore delayed suspend
+    stty discard '^O' # restore discard
+
+    exit $_ztcz_code
+}
+
+
+# ┌─────────────┐
+# │    write    │
+# └─────────────┘
+
+function ztc:core:write { print -n ${(j::)@} } # output to terminal
