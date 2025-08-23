@@ -344,7 +344,7 @@ function ztc:engine:text:input { # detect user inputs + build commands
 
         esac
 
-        ztc:cassette:core:cycle commander
+        ztc:cassette:paint:cycle commander
 
 
     else # input is a shortcut

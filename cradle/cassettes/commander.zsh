@@ -37,7 +37,7 @@
 
 function ztc:cassette:commander:clear {
     ztc[commander:status]=''
-    ztc:cassette:core:cycle commander
+    ztc:cassette:paint:cycle commander
 }
 
 
@@ -49,7 +49,7 @@ function ztc:cassette:commander:enter {
     ztc[commander:active]=1
     ztc[commander:prefix]=${1:-:}
 
-    ztc:cassette:core:cycle commander
+    ztc:cassette:paint:cycle commander
 }
 
 # ┌─────────────┐
