@@ -31,9 +31,9 @@
 # │ ░░▒▒▓▓██  PLONK  ██▓▓▒▒░░ │
 # └───────────────────────────┘
 
-# ┌────────────────┐
-# │    defaults    │
-# └────────────────┘
+# ┌─────────────┐
+# │    entry    │
+# └─────────────┘
 
 function ztc:plonk { # set config settings + register parts
 
@@ -50,6 +50,34 @@ function ztc:plonk { # set config settings + register parts
     ztc:plonk:flares
     ztc:plonk:commands
     ztc:plonk:components
+
+}
+
+
+# ┌────────────────┐
+# │    commands    │
+# └────────────────┘
+
+function ztc:plonk:commands {
+
+    # ───── register commands ─────
+
+    local -U _ztcpl_commands=(date)
+    ztc:gizmo:stash :commands _ztcpl_commands
+
+}
+
+
+# ┌──────────────────┐
+# │    components    │
+# └──────────────────┘
+
+function ztc:plonk:components {
+
+    # ───── register components ─────
+
+    local -U _ztcpl_components=(face:digital date commander)
+    ztc:gizmo:stash components _ztcpl_components
 
 }
 
@@ -98,33 +126,5 @@ function ztc:plonk:flares {
     for _ztcpl_key in ${(Ok)_ztcpl_route}; do _ztcpl_flares+=(${(As:@:)_ztcpl_route[$_ztcpl_key]}); done
 
     ztc:gizmo:stash flares _ztcpl_flares
-
-}
-
-
-# ┌────────────────┐
-# │    commands    │
-# └────────────────┘
-
-function ztc:plonk:commands {
-
-    # ───── register commands ─────
-
-    local -U _ztcpl_commands=(date)
-    ztc:gizmo:stash :commands _ztcpl_commands
-
-}
-
-
-# ┌──────────────────┐
-# │    components    │
-# └──────────────────┘
-
-function ztc:plonk:components {
-
-    # ───── register components ─────
-
-    local -U _ztcpl_components=(face:digital date commander)
-    ztc:gizmo:stash components _ztcpl_components
 
 }

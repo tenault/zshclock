@@ -27,89 +27,60 @@
 # ┃ └────────────────────────────────────────────────────────────────────────────────────────────┘ ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-# ┌────────────────────────────┐┌───────────────┐
-# │ ░░▒▒▓▓██  GIZMOS  ██▓▓▒▒░░ ││    HOARDER    │
-# └────────────────────────────┘└───────────────┘
+# ┌───────────────────────────────┐┌────────────┐
+# │ ░░▒▒▓▓██  CASSETTES  ██▓▓▒▒░░ ││    TEXT    │
+# └───────────────────────────────┘└────────────┘
 
 # ┌─────────────┐
-# │    stash    │
+# │    shift    │
 # └─────────────┘
 
-function ztc:gizmo:stash { # escape flares + flatten array for storage
+function ztc:cassette:text:shift { # transform closest word
+    local _ztcct_input=${(P)1}
+    local _ztcct_index=${(P)2}
 
-    # ───── import ─────
+    local _ztcct_left=''
+    local _ztcct_right=''
+    local _ztcct_word_left=''
+    local _ztcct_word_right=''
 
-    local _ztcst_pouch=(${(AP)2})
+    ztc:gizmo:words _ztcct_input _ztcct_index both _ztcct_left _ztcct_right _ztcct_word_left _ztcct_word_right
+    ztc:gizmo:shift _ztcct_input _ztcct_index $3 _ztcct_left _ztcct_right _ztcct_word_left _ztcct_word_right
 
-
-    # ───── build stash ─────
-
-    local _ztcst_stash=()
-
-    for _ztcst_jewel in $_ztcst_pouch; do
-
-        # ╶╶╶╶╶ escape `@@` + split by `@n` ╴╴╴╴╴
-
-        local _ztcst_shiny=(${(As:@n:)_ztcst_jewel//@@/@\(@\)})
-
-        # ╶╶╶╶╶ escape `@` + add to stash ╴╴╴╴╴
-
-        for _ztcst_i in {1..${#_ztcst_shiny}}; do _ztcst_shiny[$_ztcst_i]=${_ztcst_shiny[$_ztcst_i]//@/@@}; done
-
-        _ztcst_stash+=($_ztcst_shiny)
-
-    done
-
-
-    # ───── export ─────
-
-    ztc[$1]=${(j:@n:)_ztcst_stash//@@\(@@\)/@\(@\)} # reduce `@@(@@)` into `@(@)`
-
+    ztc[commander:input]=$_ztcct_input
+    ztc[commander:cursor]=${#_ztcct_right}
 }
 
 
 # ┌─────────────┐
-# │    steal    │
+# │    yield    │
 # └─────────────┘
 
-function ztc:gizmo:steal { # retrieve flattened array + undo flare escapement
+function ztc:cassette:text:yield { # submit and process input
 
-    # ───── import ─────
+    # ───── import + setup ─────
 
-    local _ztcst_stash=(${(As:@@:)ztc[$1]})
+    local _ztcct_input=$1
+    local _ztcct_history_index=$ztc[commander:history:index]
 
-
-    # ───── steal stash ─────
-
-    local _ztcst_theft=()
-    local _ztcst_prior=''
-
-    if [[ ${ztc[$1]:0:2} == '@@' ]]; then _ztcst_prior='@ '; fi # preserve leading `@`
-
-    for _ztcst_jewel in $_ztcst_stash; do
-
-        # ╶╶╶╶╶ split by `@n` ╴╴╴╴╴
-
-        local _ztcst_shiny=(${(As:@n:)_ztcst_jewel})
-
-        # ╶╶╶╶╶ insert escaped `@` ╴╴╴╴╴
-
-        _ztcst_prior=${_ztcst_prior:+${_ztcst_prior}@}
-        _ztcst_shiny[1]=${_ztcst_prior/#@ }$_ztcst_shiny[1] # compress `@ @` into `@`
-
-        # ╶╶╶╶╶ prep for next jewel + add to theft ╴╴╴╴╴
-
-        _ztcst_prior=$_ztcst_shiny[-1]
-        shift -p _ztcst_shiny
-
-        _ztcst_theft+=($_ztcst_shiny)
-
-    done
+    local -U _ztcct_history=()
+    ztc:gizmo:steal commander:history _ztcct_history
 
 
-    # ───── export ─────
+    # ───── write to history ─────
 
-    _ztcst_theft+=($_ztcst_prior)
-    : ${(AP)2::=$_ztcst_theft}
+    local _ztcct_entry_index=$_ztcct_history[(I)$_ztcct_input]
+    if (( _ztcct_entry_index != 0 )); then _ztcct_history[$_ztcct_entry_index]=(); fi # remove old entry
+    _ztcct_history+=($_ztcct_input) # append new entry
+
+    ztc:gizmo:stash commander:history _ztcct_history
+
+
+    # ───── trim whitespace + parse ─────
+
+    local _ztcct_parse=${(MS)_ztcct_input##[[:graph:]]*[[:graph:]]}
+    if [[ -z $_ztcct_parse ]]; then _ztcct_parse=${(MS)_ztcct_input##[[:graph:]]}; fi
+
+    ztc:engine:text:parse $_ztcct_parse
 
 }

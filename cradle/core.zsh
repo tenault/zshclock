@@ -27,69 +27,73 @@
 # ┃ └────────────────────────────────────────────────────────────────────────────────────────────┘ ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-# ┌─────────────────────────────┐┌────────────┐
-# │ ░░▒▒▓▓██  ENGINES  ██▓▓▒▒░░ ││    TEXT    │
-# └─────────────────────────────┘└────────────┘
+# ┌──────────────────────────┐
+# │ ░░▒▒▓▓██  CORE  ██▓▓▒▒░░ │
+# └──────────────────────────┘
 
-# ┌──────────────┐
-# │    flares    │
-# └──────────────┘
+# ┌─────────────┐
+# │    build    │
+# └─────────────┘
 
-function ztc:engine:flare:newline   { : ${(P)1::=${(P)1//@\($2\)/@n}}                  }
-function ztc:engine:flare:reset     { : ${(P)1::=${(P)1//@\($2\)/$ZTC_TEXT_RESET}}     }
-function ztc:engine:flare:bold      { : ${(P)1::=${(P)1//@\($2\)/$ZTC_TEXT_BOLD}}      }
-function ztc:engine:flare:underline { : ${(P)1::=${(P)1//@\($2\)/$ZTC_TEXT_UNDERLINE}} }
-function ztc:engine:flare:invert    { : ${(P)1::=${(P)1//@\($2\)/$ZTC_TEXT_INVERT}}    }
+function ztc:core:build { # set view area + build components
+    ztc[vh]=$LINES
+    ztc[vw]=$COLUMNS
+
+    local _ztcz_components=()
+    ztc:gizmo:steal components _ztcz_components
+
+    for _ztcz_name in $_ztcz_components; do "ztc:component:${_ztcz_name}:order"; done
+
+    ztc:cassette:core:cycle
+}
 
 
 # ┌─────────────┐
-# │    entry    │
+# │    clean    │
 # └─────────────┘
 
-function ztc:engine:flare { # expand `@` flares
+function ztc:core:clean { # dissolve clock + restore terminal state
+    integer _ztcz_code=${1:-0}
+    ztc:core:write $ZTC_CURSOR_SHOW $ZTC_EXIT
 
-    # ───── import + setup ─────
+    stty dsusp '^Y'   # restore delayed suspend
+    stty discard '^O' # restore discard
 
-    local _ztcf_input=${(Pj:@n:)1//@@/@\(@\)} # escape `@@`
-
-    local _ztcf_flares=()
-    ztc:gizmo:steal flares _ztcf_flares
-
-    # ╶╶╶╶╶ retrieve guide ╴╴╴╴╴
-
-    local -U _ztcf_flat=()
-    local -A _ztcf_guide=()
-    ztc:gizmo:steal flares:guide _ztcf_flat
-
-    for _ztcf_item in $_ztcf_flat; do
-        local -U _ztcf_entry=(${(As:#:)_ztcf_item})
-        _ztcf_guide[$_ztcf_entry[1]]=$_ztcf_entry[2]
-    done
-
-
-    # ───── delegate flare to correct expander ─────
-
-    for _ztcf_flare in $_ztcf_flares; do
-
-        # ╶╶╶╶╶ skip flaring if out of flares ╴╴╴╴╴
-
-        if [[ ! $_ztcf_input =~ @ ]]; then break; fi
-
-        # ╶╶╶╶╶ link alias ╴╴╴╴╴
-
-        local _ztcf_alias=$_ztcf_flare
-        if (( ${${(k)_ztcf_guide}[(Ie)$_ztcf_flare]} )); then _ztcf_alias=$_ztcf_guide[$_ztcf_flare]; fi
-
-        # ╶╶╶╶╶ wrap flare + expand ╴╴╴╴╴
-
-        _ztcf_input=${_ztcf_input//@$_ztcf_flare/@\($_ztcf_flare\)}
-        ztc:engine:flare:$_ztcf_alias _ztcf_input $_ztcf_flare
-
-    done
-
-
-    # ───── export ─────
-
-    : ${(AP)2::=${(s:@n:)_ztcf_input}}
-
+    exit $_ztcz_code
 }
+
+
+# ┌─────────────┐
+# │    drive    │
+# └─────────────┘
+
+function ztc:core:drive { # clock go vroom vroom
+    float _ztcz_epoch=$EPOCHREALTIME
+    integer _ztcz_epsilon=0
+
+    while true; do
+        ztc:engine:text:input # handle inputs
+        ztc:cassette:core:align # check for resizes
+
+        # clear stale statuses
+        if [[ -n ztc[commander:status] && ${$(( (EPOCHREALTIME - ztc[commander:status:epoch]) * 1000 ))%%.*} -gt ztc[:rate:status] ]]; then ztc:cassette:commander:clear; fi
+
+        # repaint clock
+        integer _ztcz_duration=${$(( (EPOCHREALTIME - _ztcz_epoch) * 1000 ))%%.*}
+        if (( _ztcz_duration >= ( ztc[:rate:refresh] - _ztcz_epsilon ) )); then
+
+            ztc:cassette:core:cycle # update component data + repaint
+
+            _ztcz_epoch=$EPOCHREALTIME
+            _ztcz_epsilon=$(( ( _ztcz_duration - (ztc[:rate:refresh] - _ztcz_epsilon) ) % ztc[:rate:refresh] ))
+
+        fi
+    done
+}
+
+
+# ┌─────────────┐
+# │    write    │
+# └─────────────┘
+
+function ztc:core:write { print -n ${(j::)@} } # output to terminal

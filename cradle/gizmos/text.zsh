@@ -27,73 +27,150 @@
 # ┃ └────────────────────────────────────────────────────────────────────────────────────────────┘ ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-# ┌─────────────────────────┐
-# │ ░░▒▒▓▓██  ZTC  ██▓▓▒▒░░ │
-# └─────────────────────────┘
+# ┌────────────────────────────┐┌────────────┐
+# │ ░░▒▒▓▓██  GIZMOS  ██▓▓▒▒░░ ││    TEXT    │
+# └────────────────────────────┘└────────────┘
 
 # ┌─────────────┐
-# │    build    │
+# │    words    │
 # └─────────────┘
 
-function ztc:core:build { # set view area + build components
-    ztc[vh]=$LINES
-    ztc[vw]=$COLUMNS
+function ztc:gizmo:words { # get closest word boundaries
 
-    local _ztcz_components=()
-    ztc:gizmo:steal components _ztcz_components
+    # ───── import ─────
 
-    for _ztcz_name in $_ztcz_components; do "ztc:component:order:$_ztcz_name"; done
+    local _ztcgt_input=${(P)1}
+    local _ztcgt_index=${(P)2}
 
-    ztc:cassette:core:cycle
+
+    # ───── get closest word boundaries ─────
+
+    # ╶╶╶╶╶ left ╴╴╴╴╴
+
+    local _ztcgt_left=${(*)${_ztcgt_input:0:_ztcgt_index}/%[[:space:]]#} # trim trailing spaces in left
+    local _ztcgt_word_left=${(MS)_ztcgt_left##[[:graph:]]*[[:graph:]]}  # trim all whitespace in left
+    if [[ -z $_ztcgt_word_left ]]; then _ztcgt_word_left=${(MS)_ztcgt_left##[[:graph:]]}; fi
+
+    if [[ ! $_ztcgt_left =~ ' ' ]]; then _ztcgt_left=''
+    else _ztcgt_left="${_ztcgt_left%[[:space:]]*} "; fi  # remove last word in left
+
+    # ╶╶╶╶╶ right ╴╴╴╴╴
+
+    local _ztcgt_right=${(*)${_ztcgt_input:_ztcgt_index}/#[[:space:]]#}   # trim leading spaces in right
+    local _ztcgt_word_right=${(MS)_ztcgt_right##[[:graph:]]*[[:graph:]]} # trim all whitespace in right
+    if [[ -z $_ztcgt_word_right ]]; then _ztcgt_word_right=${(MS)_ztcgt_right##[[:graph:]]}; fi
+
+    if [[ ! $_ztcgt_right =~ ' ' ]]; then _ztcgt_right=''
+    else _ztcgt_right=" ${_ztcgt_right#*[[:space:]]}"; fi # remove first word in right
+
+    # ╶╶╶╶╶ select words ╴╴╴╴╴
+
+    _ztcgt_word_left=${_ztcgt_word_left##*[[:space:]]}   # select last word in left
+    _ztcgt_word_right=${_ztcgt_word_right%%[[:space:]]*} # select first word in right
+
+
+    # ───── export ─────
+
+    case $3 in
+        (left)
+            if [[ -n $4 ]]; then : ${(P)4::=$_ztcgt_left}; fi
+            if [[ -n $5 ]]; then : ${(P)5::=$_ztcgt_word_left}; fi
+            ;;
+        (right)
+            if [[ -n $4 ]]; then : ${(P)4::=$_ztcgt_right}; fi
+            if [[ -n $5 ]]; then : ${(P)5::=$_ztcgt_word_right}; fi
+            ;;
+        (both)
+            if [[ -n $4 ]]; then : ${(P)4::=$_ztcgt_left}; fi
+            if [[ -n $5 ]]; then : ${(P)5::=$_ztcgt_right}; fi
+            if [[ -n $6 ]]; then : ${(P)6::=$_ztcgt_word_left}; fi
+            if [[ -n $7 ]]; then : ${(P)7::=$_ztcgt_word_right}; fi
+            ;;
+    esac
+
 }
 
 
 # ┌─────────────┐
-# │    drive    │
+# │    shift    │
 # └─────────────┘
 
-function ztc:core:drive { # clock go vroom vroom
-    float _ztcz_epoch=$EPOCHREALTIME
-    integer _ztcz_epsilon=0
+function ztc:gizmo:shift { # transform word(s) at boundary
 
-    while true; do
-        ztc:engine:input # handle inputs
-        ztc:cassette:core:align # check for resizes
+    # ───── import ─────
 
-        # clear stale statuses
-        if [[ -n ztc[commander:status] && ${$(( (EPOCHREALTIME - ztc[commander:status:epoch]) * 1000 ))%%.*} -gt ztc[:rate:status] ]]; then ztc:cassette:commander:clear; fi
+    local _ztcgt_input=${(P)1}
+    local _ztcgt_index=${(P)2}
+    local _ztcgt_left=${(P)4}
+    local _ztcgt_right=${(P)5}
+    local _ztcgt_word_left=${(P)6}
+    local _ztcgt_word_right=${(P)7}
 
-        # repaint clock
-        integer _ztcz_duration=${$(( (EPOCHREALTIME - _ztcz_epoch) * 1000 ))%%.*}
-        if (( _ztcz_duration >= ( ztc[:rate:refresh] - _ztcz_epsilon ) )); then
+    local _ztcgt_shift=$3
 
-            ztc:cassette:core:cycle # update component data + repaint
 
-            _ztcz_epoch=$EPOCHREALTIME
-            _ztcz_epsilon=$(( ( _ztcz_duration - (ztc[:rate:refresh] - _ztcz_epsilon) ) % ztc[:rate:refresh] ))
+    # ───── get word(s) ─────
 
-        fi
-    done
+    local _ztcgt_bound_left=$(( _ztcgt_index - ${#_ztcgt_word_left} ))
+    local _ztcgt_bound_right=$(( ${#_ztcgt_word_left} + ${#_ztcgt_word_right} ))
+
+    if [[ $_ztcgt_shift == 'T' && "$_ztcgt_word_left$_ztcgt_word_right" == "${_ztcgt_input:_ztcgt_bound_left:_ztcgt_bound_right}" ]]; then # cursor is inside word
+
+        _ztcgt_word_right=$_ztcgt_word_left$_ztcgt_word_right
+
+        _ztcgt_left=${(*)_ztcgt_left/%[[:space:]]#}   # retrim trailing spaces
+        _ztcgt_word_left=${_ztcgt_left##*[[:space:]]} # select new last word
+
+        if [[ ! $_ztcgt_left =~ ' ' ]]; then _ztcgt_left=''
+        else _ztcgt_left="${_ztcgt_left%[[:space:]]*} "; fi # remove new last word
+
+    elif [[ $_ztcgt_shift != 'T' && "$_ztcgt_word_left$_ztcgt_word_right" != "${_ztcgt_input:_ztcgt_bound_left:_ztcgt_bound_right}" ]]; then # cursor is between words
+
+        _ztcgt_bound_left=$_ztcgt_index
+        _ztcgt_bound_right=$(( ${#_ztcgt_word_right} + 1 ))
+
+        _ztcgt_left="$_ztcgt_left$_ztcgt_word_left " # reattach
+
+    fi
+
+
+    # ───── shift word(s) + export ─────
+
+    local _ztcgt_word=''
+
+    case $_ztcgt_shift in
+
+        # ╶╶╶╶╶ transpose ╴╴╴╴╴
+
+        (T) if [[ -n $_ztcgt_word_left ]]; then _ztcgt_word_right="$_ztcgt_word_right "; fi
+            _ztcgt_word=$_ztcgt_word_right$_ztcgt_word_left
+            ;;
+
+        # ╶╶╶╶╶ capitalize ╴╴╴╴╴
+
+        (C) _ztcgt_word=${(MS)${(C)_ztcgt_input:_ztcgt_bound_left:_ztcgt_bound_right}##[[:graph:]]*[[:graph:]]} # trim whitespace
+            if [[ -z $_ztcgt_word ]]; then _ztcgt_word=${(MS)${(C)_ztcgt_input:_ztcgt_bound_left:_ztcgt_bound_right}##[[:graph:]]}; fi
+            ;;
+
+        # ╶╶╶╶╶ lowercase ╴╴╴╴╴
+
+        (L) _ztcgt_word=${(MS)${(L)_ztcgt_input:_ztcgt_bound_left:_ztcgt_bound_right}##[[:graph:]]*[[:graph:]]} # trim whitespace
+            if [[ -z $_ztcgt_word ]]; then _ztcgt_word=${(MS)${(L)_ztcgt_input:_ztcgt_bound_left:_ztcgt_bound_right}##[[:graph:]]}; fi
+            ;;
+
+        # ╶╶╶╶╶ uppercase ╴╴╴╴╴
+
+        (U) _ztcgt_word=${(MS)${(U)_ztcgt_input:_ztcgt_bound_left:_ztcgt_bound_right}##[[:graph:]]*[[:graph:]]} # trim whitespace
+            if [[ -z $_ztcgt_word ]]; then _ztcgt_word=${(MS)${(U)_ztcgt_input:_ztcgt_bound_left:_ztcgt_bound_right}##[[:graph:]]}; fi
+            ;;
+
+    esac
+
+    : ${(P)4::=$_ztcgt_left}
+    : ${(P)5::=$_ztcgt_right}
+    : ${(P)6::=$_ztcgt_word_left}
+    : ${(P)7::=$_ztcgt_word_right}
+
+    : ${(P)1::=$_ztcgt_left$_ztcgt_word$_ztcgt_right}
+
 }
-
-
-# ┌─────────────┐
-# │    clean    │
-# └─────────────┘
-
-function ztc:core:clean { # dissolve clock + restore terminal state
-    integer _ztcz_code=${1:-0}
-    ztc:core:write $ZTC_CURSOR_SHOW $ZTC_EXIT
-
-    stty dsusp '^Y'   # restore delayed suspend
-    stty discard '^O' # restore discard
-
-    exit $_ztcz_code
-}
-
-
-# ┌─────────────┐
-# │    write    │
-# └─────────────┘
-
-function ztc:core:write { print -n ${(j::)@} } # output to terminal

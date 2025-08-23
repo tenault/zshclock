@@ -27,31 +27,31 @@
 # ┃ └────────────────────────────────────────────────────────────────────────────────────────────┘ ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-# ┌─────────────────────────────┐┌─────────────────┐
-# │ ░░▒▒▓▓██  ENGINES  ██▓▓▒▒░░ ││    COMMANDER    │
-# └─────────────────────────────┘└─────────────────┘
+# ┌─────────────────────────────┐┌────────────┐┌╴╴╴╴╴╴╴╴╴╴╴╴╴┐
+# │ ░░▒▒▓▓██  ENGINES  ██▓▓▒▒░░ ││    TEXT    │╎    INPUT    ╎
+# └─────────────────────────────┘└────────────┘└╶╶╶╶╶╶╶╶╶╶╶╶╶┘
 
 # ┌─────────────┐
 # │    input    │
 # └─────────────┘
 
-function ztc:engine:input { # detect user inputs + build commands
+function ztc:engine:text:input { # detect user inputs + build commands
 
     # ───── read input ─────
 
-    local _ztci_key=''
-    read -s -t $(( ztc[:rate:input] / 1000.0 )) -k 1 _ztci_key
+    local _ztcti_key=''
+    read -s -t $(( ztc[:rate:input] / 1000.0 )) -k 1 _ztcti_key
 
 
     # ───── process input ─────
 
     if (( ztc[commander:active] )); then # attach input to command bar
 
-        local _ztci_input=$ztc[commander:input]
-        integer _ztci_cursor=$ztc[commander:cursor]
-        integer _ztci_index=$(( ${#_ztci_input} - _ztci_cursor ))
+        local _ztcti_input=$ztc[commander:input]
+        integer _ztcti_cursor=$ztc[commander:cursor]
+        integer _ztcti_index=$(( ${#_ztcti_input} - _ztcti_cursor ))
 
-        case $_ztci_key in
+        case $_ztcti_key in
 
             # ╶╶╶╶╶ ignore empty keys ╴╴╴╴╴
 
@@ -60,21 +60,21 @@ function ztc:engine:input { # detect user inputs + build commands
             # ╶╶╶╶╶ <esc> + special keys ╴╴╴╴╴
 
             ($'\e')
-                local _ztci_s1=''
-                local _ztci_s2=''
-                local _ztci_s3=''
-                local _ztci_s4=''
-                local _ztci_s5=''
+                local _ztcti_s1=''
+                local _ztcti_s2=''
+                local _ztcti_s3=''
+                local _ztcti_s4=''
+                local _ztcti_s5=''
 
-                read -st -k 1 _ztci_s1
-                read -st -k 1 _ztci_s2
-                read -st -k 1 _ztci_s3
-                read -st -k 1 _ztci_s4
-                read -st -k 1 _ztci_s5
+                read -st -k 1 _ztcti_s1
+                read -st -k 1 _ztcti_s2
+                read -st -k 1 _ztcti_s3
+                read -st -k 1 _ztcti_s4
+                read -st -k 1 _ztcti_s5
 
-                local _ztci_special=$_ztci_s1$_ztci_s2$_ztci_s3$_ztci_s4$_ztci_s5
+                local _ztcti_special=$_ztcti_s1$_ztcti_s2$_ztcti_s3$_ztcti_s4$_ztcti_s5
 
-                case $_ztci_special in
+                case $_ztcti_special in
 
                     # ╶╶╶╶╶ <esc> ╴╴╴╴╴
 
@@ -90,22 +90,22 @@ function ztc:engine:input { # detect user inputs + build commands
 
                     # ╶╶╶╶╶ <right> (move cursor right) ╴╴╴╴╴
 
-                    ('[C') if (( _ztci_cursor > 0 )); then (( ztc[commander:cursor]-- )); fi ;;
+                    ('[C') if (( _ztcti_cursor > 0 )); then (( ztc[commander:cursor]-- )); fi ;;
 
                     # ╶╶╶╶╶ <left> (move cursor left) ╴╴╴╴╴
 
-                    ('[D') if (( _ztci_index > 0 )); then (( ztc[commander:cursor]++ )); fi ;;
+                    ('[D') if (( _ztcti_index > 0 )); then (( ztc[commander:cursor]++ )); fi ;;
 
                     # ╶╶╶╶╶ <alt-delete> (delete word) ╴╴╴╴╴
 
                     ($'\x7f')
-                        if (( _ztci_index != 0 )); then
-                            local _ztci_left=''
-                            local _ztci_word=''
-                            ztc:gizmo:words _ztci_input _ztci_index left _ztci_left _ztci_word
+                        if (( _ztcti_index != 0 )); then
+                            local _ztcti_left=''
+                            local _ztcti_word=''
+                            ztc:gizmo:words _ztcti_input _ztcti_index left _ztcti_left _ztcti_word
 
-                            ztc[commander:yank]=$_ztci_word
-                            ztc[commander:input]=$_ztci_left${_ztci_input:_ztci_index}
+                            ztc[commander:yank]=$_ztcti_word
+                            ztc[commander:input]=$_ztcti_left${_ztcti_input:_ztcti_index}
                         fi ;;
 
                     # ╶╶╶╶╶ <alt-<> (first line in history) ╴╴╴╴╴
@@ -119,59 +119,59 @@ function ztc:engine:input { # detect user inputs + build commands
                     # ╶╶╶╶╶ <alt-b>/<alt-left> (move cursor one word left) ╴╴╴╴╴
 
                     ('b'|'[1;3D')
-                        if (( _ztci_index != 0 )); then
-                            local _ztci_left=''
-                            ztc:gizmo:words _ztci_input _ztci_index left _ztci_left
+                        if (( _ztcti_index != 0 )); then
+                            local _ztcti_left=''
+                            ztc:gizmo:words _ztcti_input _ztcti_index left _ztcti_left
 
-                            ztc[commander:cursor]=$(( ${#_ztci_input} - ${#_ztci_left} ))
+                            ztc[commander:cursor]=$(( ${#_ztcti_input} - ${#_ztcti_left} ))
                         fi ;;
 
                     # ╶╶╶╶╶ <alt-c> (capitalize word) ╴╴╴╴╴
 
-                    ('c') ztc:cassette:commander:shift _ztci_input _ztci_index C ;;
+                    ('c') ztc:cassette:text:shift _ztcti_input _ztcti_index C ;;
 
                     # ╶╶╶╶╶ <alt-d> (forward delete word) ╴╴╴╴╴
 
                     ('d')
-                        if (( _ztci_cursor != 0 )); then
-                            local _ztci_right=''
-                            local _ztci_word=''
-                            ztc:gizmo:words _ztci_input _ztci_index right _ztci_right _ztci_word
+                        if (( _ztcti_cursor != 0 )); then
+                            local _ztcti_right=''
+                            local _ztcti_word=''
+                            ztc:gizmo:words _ztcti_input _ztcti_index right _ztcti_right _ztcti_word
 
-                            ztc[commander:yank]=$_ztci_word
-                            ztc[commander:input]=${_ztci_input:0:_ztci_index}$_ztci_right
-                            ztc[commander:cursor]=${#_ztci_right}
+                            ztc[commander:yank]=$_ztcti_word
+                            ztc[commander:input]=${_ztcti_input:0:_ztcti_index}$_ztcti_right
+                            ztc[commander:cursor]=${#_ztcti_right}
                         fi ;;
 
                     # ╶╶╶╶╶ <alt-f>/<alt-right> (move cursor one word right) ╴╴╴╴╴
 
                     ('f'|'[1;3C')
-                        if (( _ztci_cursor != 0 )); then
-                            local ztci_right=''
-                            ztc:gizmo:words _ztci_input _ztci_index right _ztci_right
+                        if (( _ztcti_cursor != 0 )); then
+                            local ztcti_right=''
+                            ztc:gizmo:words _ztcti_input _ztcti_index right _ztcti_right
 
-                            ztc[commander:cursor]=${#_ztci_right}
+                            ztc[commander:cursor]=${#_ztcti_right}
                         fi ;;
 
                     # ╶╶╶╶╶ <alt-l> (lowercase word) ╴╴╴╴╴
 
-                    ('l') ztc:cassette:commander:shift _ztci_input _ztci_index L ;;
+                    ('l') ztc:cassette:text:shift _ztcti_input _ztcti_index L ;;
 
                     # ╶╶╶╶╶ <alt-n>/<alt-down> (next line in history based on input) ╴╴╴╴╴
 
-                    ('n'|'[1;3B') if [[ -n $_ztci_input && $ztc[commander:help] -eq 0 ]]; then ztc:cassette:commander:serve next $_ztci_input; fi ;;
+                    ('n'|'[1;3B') if [[ -n $_ztcti_input && $ztc[commander:help] -eq 0 ]]; then ztc:cassette:commander:serve next $_ztcti_input; fi ;;
 
                     # ╶╶╶╶╶ <alt-p>/<alt-up> (previous line in history based on input) ╴╴╴╴╴
 
-                    ('p'|'[1;3A') if [[ -n $_ztci_input && $ztc[commander:help] -eq 0 ]]; then ztc:cassette:commander:serve previous $_ztci_input; fi ;;
+                    ('p'|'[1;3A') if [[ -n $_ztcti_input && $ztc[commander:help] -eq 0 ]]; then ztc:cassette:commander:serve previous $_ztcti_input; fi ;;
 
                     # ╶╶╶╶╶ <alt-t> (swap words around cursor) ╴╴╴╴╴
 
-                    ('t') ztc:cassette:commander:shift _ztci_input _ztci_index T ;;
+                    ('t') ztc:cassette:text:shift _ztcti_input _ztcti_index T ;;
 
                     # ╶╶╶╶╶ <alt-u> (uppercase word) ╴╴╴╴╴
 
-                    ('u') ztc:cassette:commander:shift _ztci_input _ztci_index U ;;
+                    ('u') ztc:cassette:text:shift _ztcti_input _ztcti_index U ;;
 
                     # ╶╶╶╶╶ ignore all other special keys ╴╴╴╴╴
 
@@ -181,20 +181,20 @@ function ztc:engine:input { # detect user inputs + build commands
 
             # ╶╶╶╶╶ <ctrl-a> (move cursor to beginning) ╴╴╴╴╴
 
-            ($'\x1') ztc[commander:cursor]=${#_ztci_input} ;;
+            ($'\x1') ztc[commander:cursor]=${#_ztcti_input} ;;
 
             # ╶╶╶╶╶ <ctrl-b> (move cursor left) ╴╴╴╴╴
 
-            ($'\x2') if (( _ztci_index > 0 )); then (( ztc[commander:cursor]++ )); fi ;;
+            ($'\x2') if (( _ztcti_index > 0 )); then (( ztc[commander:cursor]++ )); fi ;;
 
             # ╶╶╶╶╶ <ctrl-d> (forward delete) ╴╴╴╴╴
 
             ($'\x4')
-                if (( ${#_ztci_input} == 0 )); then
+                if (( ${#_ztcti_input} == 0 )); then
                     ztc:cassette:commander:leave
                 else
-                    if (( _ztci_index != ${#_ztci_input} )); then
-                        ztc[commander:input]=${_ztci_input:0:_ztci_index}${_ztci_input:$(( _ztci_index + 1 ))}
+                    if (( _ztcti_index != ${#_ztcti_input} )); then
+                        ztc[commander:input]=${_ztcti_input:0:_ztcti_index}${_ztcti_input:$(( _ztcti_index + 1 ))}
                         (( ztc[commander:cursor]-- ))
                     fi
                 fi ;;
@@ -205,7 +205,7 @@ function ztc:engine:input { # detect user inputs + build commands
 
             # ╶╶╶╶╶ <ctrl-f> (move cursor) ╴╴╴╴╴
 
-            ($'\x6') if (( _ztci_cursor > 0 )); then (( ztc[commander:cursor]-- )); fi ;;
+            ($'\x6') if (( _ztcti_cursor > 0 )); then (( ztc[commander:cursor]-- )); fi ;;
 
             # ╶╶╶╶╶ <ctrl-g> (<esc>) ╴╴╴╴╴
 
@@ -213,7 +213,7 @@ function ztc:engine:input { # detect user inputs + build commands
 
             # ╶╶╶╶╶ <ctrl-h>/<backspace>/<delete> ╴╴╴╴╴
 
-            ($'\x8'|$'\b'|$'\x7f') if (( _ztci_index != 0 )); then ztc[commander:input]=${_ztci_input:0:$(( _ztci_index - 1 ))}${_ztci_input:_ztci_index}; fi ;;
+            ($'\x8'|$'\b'|$'\x7f') if (( _ztcti_index != 0 )); then ztc[commander:input]=${_ztcti_input:0:$(( _ztcti_index - 1 ))}${_ztcti_input:_ztcti_index}; fi ;;
 
             # ╶╶╶╶╶ <ctrl-i> (<tab>) ╴╴╴╴╴
 
@@ -223,20 +223,20 @@ function ztc:engine:input { # detect user inputs + build commands
 
             ($'\xA'|$'\xD'|$'\n'|$'\r')
                 if (( ! ztc[commander:help] )); then
-                    if (( ${#_ztci_input} > 0 )); then ztc:cassette:commander:yield $_ztci_input
+                    if (( ${#_ztcti_input} > 0 )); then ztc:cassette:text:yield $_ztcti_input
                     else ztc:cassette:commander:leave; fi
                 else
-                    local _ztci_parse=${(MS)_ztci_input##[[:graph:]]*[[:graph:]]}
-                    if [[ -z $_ztci_parse ]]; then _ztci_parse=${(MS)_ztci_input##[[:graph:]]}; fi
+                    local _ztcti_parse=${(MS)_ztcti_input##[[:graph:]]*[[:graph:]]}
+                    if [[ -z $_ztcti_parse ]]; then _ztcti_parse=${(MS)_ztcti_input##[[:graph:]]}; fi
 
-                    ztc:parse $_ztci_parse
+                    ztc:engine:text:parse $_ztcti_parse
                 fi ;;
 
             # ╶╶╶╶╶ <ctrl-k> (delete from cursor to end) ╴╴╴╴╴
 
             ($'\xB')
-                ztc[commander:yank]=${_ztci_input:_ztci_index}
-                ztc[commander:input]=${_ztci_input:0:_ztci_index}
+                ztc[commander:yank]=${_ztcti_input:_ztcti_index}
+                ztc[commander:input]=${_ztcti_input:0:_ztcti_index}
                 ztc[commander:cursor]=0
                 ;;
 
@@ -256,15 +256,15 @@ function ztc:engine:input { # detect user inputs + build commands
 
             ($'\xF')
                 if (( ! ztc[commander:help] )); then
-                    local _ztci_history_index=$ztc[commander:history:index]
-                    local _ztci_history_filter=$ztc[commander:history:filter]
+                    local _ztcti_history_index=$ztc[commander:history:index]
+                    local _ztcti_history_filter=$ztc[commander:history:filter]
 
-                    if (( ${#_ztci_input} > 0 )); then ztc:cassette:commander:yield $_ztci_input
+                    if (( ${#_ztcti_input} > 0 )); then ztc:cassette:text:yield $_ztcti_input
                     else ztc:cassette:commander:leave; fi
 
                     ztc:cassette:commander:enter
-                    ztc[commander:history:index]=$(( _ztci_history_index + 1 )) # adjust for dup removal
-                    ztc[commander:history:filter]=$_ztci_history_filter
+                    ztc[commander:history:index]=$(( _ztcti_history_index + 1 )) # adjust for dup removal
+                    ztc[commander:history:filter]=$_ztcti_history_filter
                     ztc:cassette:commander:serve next
                 fi ;;
 
@@ -287,25 +287,25 @@ function ztc:engine:input { # detect user inputs + build commands
             # ╶╶╶╶╶ <ctrl-t> (swap characters around cursor) ╴╴╴╴╴
 
             ($'\x14')
-                if (( _ztci_index > 0 )); then
-                    if (( _ztci_cursor == 0 )); then (( _ztci_index -= 1 )); fi
+                if (( _ztcti_index > 0 )); then
+                    if (( _ztcti_cursor == 0 )); then (( _ztcti_index -= 1 )); fi
 
-                    local _ztci_left=${_ztci_input:0:$(( _ztci_index - 1 ))}
-                    local _ztci_right=${_ztci_input:$(( _ztci_index + 1 ))}
-                    local _ztci_a=${_ztci_input:$(( _ztci_index - 1 )):1}
-                    local _ztci_b=${_ztci_input:_ztci_index:1}
+                    local _ztcti_left=${_ztcti_input:0:$(( _ztcti_index - 1 ))}
+                    local _ztcti_right=${_ztcti_input:$(( _ztcti_index + 1 ))}
+                    local _ztcti_a=${_ztcti_input:$(( _ztcti_index - 1 )):1}
+                    local _ztcti_b=${_ztcti_input:_ztcti_index:1}
 
-                    ztc[commander:input]=$_ztci_left$_ztci_b$_ztci_a$_ztci_right
+                    ztc[commander:input]=$_ztcti_left$_ztcti_b$_ztcti_a$_ztcti_right
                 fi
 
-                if (( _ztci_cursor > 0 )); then (( ztc[commander:cursor]-- )); fi
+                if (( _ztcti_cursor > 0 )); then (( ztc[commander:cursor]-- )); fi
                 ;;
 
             # ╶╶╶╶╶ <ctrl-u> (delete from beginning to cursor) ╴╴╴╴╴
 
             ($'\x15')
-                ztc[commander:yank]=${_ztci_input:0:_ztci_index}
-                ztc[commander:input]=${_ztci_input:_ztci_index}
+                ztc[commander:yank]=${_ztcti_input:0:_ztcti_index}
+                ztc[commander:input]=${_ztcti_input:_ztcti_index}
                 ;;
 
             # ╶╶╶╶╶ <ctrl-v> (literal insert) ╴╴╴╴╴
@@ -315,32 +315,32 @@ function ztc:engine:input { # detect user inputs + build commands
             # ╶╶╶╶╶ <ctrl-w> (delete word) ╴╴╴╴╴
 
             ($'\x17')
-                if (( _ztci_index != 0 )); then
-                    local _ztci_left=''
-                    local _ztci_word=''
-                    ztc:gizmo:words _ztci_input _ztci_index left _ztci_left _ztci_word
+                if (( _ztcti_index != 0 )); then
+                    local _ztcti_left=''
+                    local _ztcti_word=''
+                    ztc:gizmo:words _ztcti_input _ztcti_index left _ztcti_left _ztcti_word
 
-                    ztc[commander:yank]=$_ztci_word
-                    ztc[commander:input]=$_ztci_left${_ztci_input:_ztci_index}
+                    ztc[commander:yank]=$_ztcti_word
+                    ztc[commander:input]=$_ztcti_left${_ztcti_input:_ztcti_index}
                 fi ;;
 
             # ╶╶╶╶╶ <ctrl-x> (alternate between cursor and beginning) ╴╴╴╴╴
 
             ($'\x18')
-                if (( _ztci_index != 0 )); then
-                    ztc[commander:cursor:last]=$_ztci_cursor
-                    ztc[commander:cursor]=${#_ztci_input}
+                if (( _ztcti_index != 0 )); then
+                    ztc[commander:cursor:last]=$_ztcti_cursor
+                    ztc[commander:cursor]=${#_ztcti_input}
                 else
                     ztc[commander:cursor]=$ztc[commander:cursor:last]
                 fi ;;
 
             # ╶╶╶╶╶ <ctrl-y> (paste) ╴╴╴╴╴
 
-            ($'\x19') ztc[commander:input]=${_ztci_input:0:_ztci_index}$ztc[commander:yank]${_ztci_input:_ztci_index} ;;
+            ($'\x19') ztc[commander:input]=${_ztcti_input:0:_ztcti_index}$ztc[commander:yank]${_ztcti_input:_ztcti_index} ;;
 
             # ╶╶╶╶╶ insert key at cursor index ╴╴╴╴╴
 
-            (*) ztc[commander:input]=${_ztci_input:0:_ztci_index}$_ztci_key${_ztci_input:_ztci_index} ;;
+            (*) ztc[commander:input]=${_ztcti_input:0:_ztcti_index}$_ztcti_key${_ztcti_input:_ztcti_index} ;;
 
         esac
 
@@ -349,7 +349,7 @@ function ztc:engine:input { # detect user inputs + build commands
 
     else # input is a shortcut
 
-        case $_ztci_key in
+        case $_ztcti_key in
 
             # ╶╶╶╶╶ clear status ╴╴╴╴╴
 

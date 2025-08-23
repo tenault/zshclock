@@ -27,31 +27,69 @@
 # ┃ └────────────────────────────────────────────────────────────────────────────────────────────┘ ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-# ┌───────────────────────────────┐┌───────────┐
-# │ ░░▒▒▓▓██  CASSETTES  ██▓▓▒▒░░ ││    ZTC    │
-# └───────────────────────────────┘└───────────┘
+# ┌─────────────────────────────┐┌────────────┐┌╴╴╴╴╴╴╴╴╴╴╴╴╴╴┐
+# │ ░░▒▒▓▓██  ENGINES  ██▓▓▒▒░░ ││    TEXT    │╎    FLARES    ╎
+# └─────────────────────────────┘└────────────┘└╶╶╶╶╶╶╶╶╶╶╶╶╶╶┘
 
 # ┌─────────────┐
-# │    align    │
+# │    entry    │
 # └─────────────┘
 
-function ztc:cassette:core:align { # check for resizes + rebuild
-    LINES=
-    COLUMNS=
+function ztc:engine:text:flare { # expand `@` flares
 
-    if (( LINES != ztc[vh] || COLUMNS != ztc[vw] )); then ztc:core:build; fi
+    # ───── import + setup ─────
+
+    local _ztctf_input=${(Pj:@n:)1//@@/@\(@\)} # escape `@@`
+
+    local _ztctf_flares=()
+    ztc:gizmo:steal flares _ztctf_flares
+
+    # ╶╶╶╶╶ retrieve guide ╴╴╴╴╴
+
+    local -U _ztctf_flat=()
+    local -A _ztctf_guide=()
+    ztc:gizmo:steal flares:guide _ztctf_flat
+
+    for _ztctf_item in $_ztctf_flat; do
+        local -U _ztctf_entry=(${(As:#:)_ztctf_item})
+        _ztctf_guide[$_ztctf_entry[1]]=$_ztctf_entry[2]
+    done
+
+
+    # ───── delegate flare to correct expander ─────
+
+    for _ztctf_flare in $_ztctf_flares; do
+
+        # ╶╶╶╶╶ skip flaring if out of flares ╴╴╴╴╴
+
+        if [[ ! $_ztctf_input =~ @ ]]; then break; fi
+
+        # ╶╶╶╶╶ link alias ╴╴╴╴╴
+
+        local _ztctf_alias=$_ztctf_flare
+        if (( ${${(k)_ztctf_guide}[(Ie)$_ztctf_flare]} )); then _ztctf_alias=$_ztctf_guide[$_ztctf_flare]; fi
+
+        # ╶╶╶╶╶ wrap flare + expand ╴╴╴╴╴
+
+        _ztctf_input=${_ztctf_input//@$_ztctf_flare/@\($_ztctf_flare\)}
+        ztc:engine:text:flare:$_ztctf_alias _ztctf_input $_ztctf_flare
+
+    done
+
+
+    # ───── export ─────
+
+    : ${(AP)2::=${(s:@n:)_ztctf_input}}
+
 }
 
 
-# ┌─────────────┐
-# │    cycle    │
-# └─────────────┘
+# ┌──────────────┐
+# │    flares    │
+# └──────────────┘
 
-function ztc:cassette:core:cycle { # update component data + repaint
-    local -U _ztccz_components=$@
-    if (( $# == 0 )); then ztc:gizmo:steal components _ztccz_components; fi
-
-    for _ztccz_name in $_ztccz_components; do ztc:component:alter:$_ztccz_name; done
-
-    ztc:engine:paint $@
-}
+function ztc:engine:text:flare:newline   { : ${(P)1::=${(P)1//@\($2\)/@n}}                  }
+function ztc:engine:text:flare:reset     { : ${(P)1::=${(P)1//@\($2\)/$ZTC_TEXT_RESET}}     }
+function ztc:engine:text:flare:bold      { : ${(P)1::=${(P)1//@\($2\)/$ZTC_TEXT_BOLD}}      }
+function ztc:engine:text:flare:underline { : ${(P)1::=${(P)1//@\($2\)/$ZTC_TEXT_UNDERLINE}} }
+function ztc:engine:text:flare:invert    { : ${(P)1::=${(P)1//@\($2\)/$ZTC_TEXT_INVERT}}    }

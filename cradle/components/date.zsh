@@ -35,7 +35,7 @@
 # │    order    │
 # └─────────────┘
 
-function ztc:component:order:date {
+function ztc:component:date:order {
     ztc[date:y]=:auto
     ztc[date:x]=:auto
     ztc[date:h]=:auto
@@ -47,7 +47,7 @@ function ztc:component:order:date {
 # │    alter    │
 # └─────────────┘
 
-function ztc:component:alter:date {
+function ztc:component:date:alter {
     local _ztcad_date=''
     strftime -s _ztcad_date ${ztc[:date:format]//\%n/@n} # capture newlines
 
