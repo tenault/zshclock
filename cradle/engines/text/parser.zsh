@@ -36,8 +36,8 @@
 # └───────────────┘
 
 function ztc:engine:text:parse:date {
-    local _ztcpsd_format=${(j: :)@}
-    ztc[:date:format]=${_ztcpsd_format:-"%a %b %d %p"}
+    local _ztctp_format=${(j: :)@}
+    ztc[:date:format]=${_ztctp_format:-"%a %b %d %p"}
     ztc:cassette:paint:cycle date
 }
 
@@ -47,14 +47,14 @@ function ztc:engine:text:parse:date {
 # └─────────────┘
 
 function ztc:engine:text:parse { # delegate command to correct parser
-    local -U _ztcps_commands=()
-    ztc:gizmo:steal :commands _ztcps_commands
+    local -U _ztctp_commands=()
+    ztc:gizmo:steal :commands _ztctp_commands
 
     if [[ -n $1 ]]; then
-        local _ztcps_input=(${(As: :)1})
-        local _ztcps_command=${(L)_ztcps_input[1]//\\/\\\\}
+        local _ztctp_input=(${(As: :)1})
+        local _ztctp_command=${(L)_ztctp_input[1]//\\/\\\\}
 
-        case $_ztcps_command in
+        case $_ztctp_command in
             (q|quit|exit)
                 ztc:core:clean
                 ;;
@@ -62,20 +62,20 @@ function ztc:engine:text:parse { # delegate command to correct parser
                 # help function goes here
                 ;;
             (*)
-                if (( _ztcps_commands[(Ie)$_ztcps_command] )); then
-                    ztc:engine:text:parse:$_ztcps_command ${_ztcps_input:1}
+                if (( _ztctp_commands[(Ie)$_ztctp_command] )); then
+                    ztc:engine:text:parse:$_ztctp_command ${_ztctp_input:1}
                     ztc:cassette:commander:leave
                 else
-                    ztc:cassette:commander:leave "@i Unknown command: ${_ztcps_command//@/@@} @r"
+                    ztc:cassette:commander:leave "@i Unknown command: ${_ztctp_command//@/@@} @r"
                 fi ;;
         esac
     else
-        local _ztcps_list=()
+        local _ztctp_list=()
 
-        for _ztcps_command in $_ztcps_commands; do
-            _ztcps_list+=("@u$_ztcps_command@r")
+        for _ztctp_command in $_ztctp_commands; do
+            _ztctp_list+=("@u$_ztctp_command@r")
         done
 
-        ztc:cassette:commander:leave "@i Available commands: ${(j:@i, :)_ztcps_list}@i @r"
+        ztc:cassette:commander:leave "@i Available commands: ${(j:@i, :)_ztctp_list}@i @r"
     fi
 }
