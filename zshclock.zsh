@@ -27,25 +27,11 @@
 # ┃ └────────────────────────────────────────────────────────────────────────────────────────────┘ ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-source cradle/constants.zsh
-source cradle/plonk.zsh
-source cradle/core.zsh
+# ┌───────────────────────────────────┐
+# │ ░░▒▒▓▓██  SOURCE CRADLE  ██▓▓▒▒░░ │
+# └───────────────────────────────────┘
 
-source cradle/cassettes/commander.zsh
-source cradle/cassettes/core.zsh
-source cradle/cassettes/text.zsh
-
-source cradle/components/commander.zsh
-source cradle/components/date.zsh
-source cradle/components/faces/digital.zsh
-
-source cradle/engines/painter.zsh
-source cradle/engines/text/flarer.zsh
-source cradle/engines/text/input.zsh
-source cradle/engines/text/parser.zsh
-
-source cradle/gizmos/core.zsh
-source cradle/gizmos/text.zsh
+for file in ~/zshclock/cradle/**/*(.); do source $file; done
 
 
 # ┌──────────────────────────────┐

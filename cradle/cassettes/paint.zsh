@@ -27,15 +27,15 @@
 # ┃ └────────────────────────────────────────────────────────────────────────────────────────────┘ ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-# ┌───────────────────────────────┐┌────────────┐
-# │ ░░▒▒▓▓██  CASSETTES  ██▓▓▒▒░░ ││    CORE    │
-# └───────────────────────────────┘└────────────┘
+# ┌───────────────────────────────┐┌─────────────┐
+# │ ░░▒▒▓▓██  CASSETTES  ██▓▓▒▒░░ ││    PAINT    │
+# └───────────────────────────────┘└─────────────┘
 
 # ┌─────────────┐
 # │    align    │
 # └─────────────┘
 
-function ztc:cassette:core:align { # check for resizes + rebuild
+function ztc:cassette:paint:resize { # check for resizes + rebuild
     LINES=
     COLUMNS=
 
@@ -47,11 +47,11 @@ function ztc:cassette:core:align { # check for resizes + rebuild
 # │    cycle    │
 # └─────────────┘
 
-function ztc:cassette:core:cycle { # update component data + repaint
-    local -U _ztccz_components=$@
-    if (( $# == 0 )); then ztc:gizmo:steal components _ztccz_components; fi
+function ztc:cassette:paint:cycle { # update component data + repaint
+    local -U _ztccp_components=$@
+    if (( $# == 0 )); then ztc:gizmo:steal components _ztccp_components; fi
 
-    for _ztccz_name in $_ztccz_components; do ztc:component:${_ztccz_name}:alter; done
+    for _ztccp_name in $_ztccp_components; do ztc:component:${_ztccp_name}:alter; done
 
     ztc:engine:paint $@
 }

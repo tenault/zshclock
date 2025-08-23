@@ -44,7 +44,7 @@ function ztc:core:build { # set view area + build components
 
     for _ztcz_name in $_ztcz_components; do "ztc:component:${_ztcz_name}:order"; done
 
-    ztc:cassette:core:cycle
+    ztc:cassette:paint:cycle
 }
 
 
@@ -73,7 +73,7 @@ function ztc:core:drive { # clock go vroom vroom
 
     while true; do
         ztc:engine:text:input # handle inputs
-        ztc:cassette:core:align # check for resizes
+        ztc:cassette:paint:resize # check for resizes
 
         # clear stale statuses
         if [[ -n ztc[commander:status] && ${$(( (EPOCHREALTIME - ztc[commander:status:epoch]) * 1000 ))%%.*} -gt ztc[:rate:status] ]]; then ztc:cassette:commander:clear; fi
@@ -82,7 +82,7 @@ function ztc:core:drive { # clock go vroom vroom
         integer _ztcz_duration=${$(( (EPOCHREALTIME - _ztcz_epoch) * 1000 ))%%.*}
         if (( _ztcz_duration >= ( ztc[:rate:refresh] - _ztcz_epsilon ) )); then
 
-            ztc:cassette:core:cycle # update component data + repaint
+            ztc:cassette:paint:cycle # update component data + repaint
 
             _ztcz_epoch=$EPOCHREALTIME
             _ztcz_epsilon=$(( ( _ztcz_duration - (ztc[:rate:refresh] - _ztcz_epsilon) ) % ztc[:rate:refresh] ))

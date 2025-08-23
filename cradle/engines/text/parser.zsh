@@ -38,7 +38,7 @@
 function ztc:engine:text:parse:date {
     local _ztcpsd_format=${(j: :)@}
     ztc[:date:format]=${_ztcpsd_format:-"%a %b %d %p"}
-    ztc:cassette:core:cycle date
+    ztc:cassette:paint:cycle date
 }
 
 
