@@ -35,7 +35,7 @@
 # │    order    │
 # └─────────────┘
 
-function ztc:component:order:face:digital {
+function ztc:component:face:digital:order {
     ztc[face:digital:y]=:auto
     ztc[face:digital:x]=:auto
     ztc[face:digital:h]=:auto
@@ -49,7 +49,7 @@ function ztc:component:order:face:digital {
 # │    alter    │
 # └─────────────┘
 
-function ztc:component:alter:face:digital {
+function ztc:component:face:digital:alter {
 
     # ───── get time + setup ─────
 

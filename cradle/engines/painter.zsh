@@ -81,7 +81,7 @@ function ztc:engine:paint { # translate component data for rendering
             fi
 
             local _ztcp_flared=()
-            ztc:engine:flare _ztcp_data _ztcp_flared
+            ztc:engine:text:flare _ztcp_data _ztcp_flared
 
             # ╶╶╶╶╶ component height ╴╴╴╴╴
 

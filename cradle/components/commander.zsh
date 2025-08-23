@@ -35,7 +35,7 @@
 # │    order    │
 # └─────────────┘
 
-function ztc:component:order:commander {
+function ztc:component:commander:order {
 
     # ───── space declaration ─────
 
@@ -74,7 +74,7 @@ function ztc:component:order:commander {
 # │    alter    │
 # └─────────────┘
 
-function ztc:component:alter:commander {
+function ztc:component:commander:alter {
 
     # ───── import ─────
 

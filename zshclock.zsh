@@ -29,23 +29,23 @@
 
 source cradle/constants.zsh
 source cradle/plonk.zsh
-source cradle/ztc.zsh
+source cradle/core.zsh
 
 source cradle/cassettes/commander.zsh
-source cradle/cassettes/ztc.zsh
+source cradle/cassettes/core.zsh
+source cradle/cassettes/text.zsh
 
 source cradle/components/commander.zsh
 source cradle/components/date.zsh
 source cradle/components/faces/digital.zsh
 
-source cradle/engines/commander.zsh
 source cradle/engines/painter.zsh
-source cradle/engines/parser.zsh
-source cradle/engines/text.zsh
+source cradle/engines/text/flarer.zsh
+source cradle/engines/text/input.zsh
+source cradle/engines/text/parser.zsh
 
-source cradle/gizmos/hoarder.zsh
-source cradle/gizmos/poet.zsh
-source cradle/gizmos/weaver.zsh
+source cradle/gizmos/core.zsh
+source cradle/gizmos/text.zsh
 
 
 # ┌──────────────────────────────┐
@@ -62,10 +62,10 @@ function zsh_that_clock {
 
     typeset -A ztc=()
 
-    ztc:plonk              # set config + init
-    ztc:core:write $ZTC_INIT    # allocate screen space
+    ztc:plonk                        # set config + init
+    ztc:core:write $ZTC_INIT         # allocate screen space
     ztc:core:build && ztc:core:drive # zsh the clock!
-    ztc:core:clean              # cleanup
+    ztc:core:clean                   # cleanup
 }
 
 zsh_that_clock
