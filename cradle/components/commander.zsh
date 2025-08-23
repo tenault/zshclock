@@ -27,31 +27,104 @@
 # ┃ └────────────────────────────────────────────────────────────────────────────────────────────┘ ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-# ┌───────────────────────────────────┐
-# │ ░░▒▒▓▓██  SOURCE CRADLE  ██▓▓▒▒░░ │
-# └───────────────────────────────────┘
+# ┌────────────────────────────────┐┌─────────────────┐
+# │ ░░▒▒▓▓██  COMPONENTS  ██▓▓▒▒░░ ││    COMMANDER    │
+# └────────────────────────────────┘└─────────────────┘
 
-for file in ~/zshclock/cradle/**/*(.); do source $file; done
+# ┌─────────────┐
+# │    order    │
+# └─────────────┘
+
+function ztc:component:commander:order {
+
+    # ───── space declaration ─────
+
+    ztc[commander:y]=$ztc[vh]
+    ztc[commander:x]=0
+    ztc[commander:h]=1
+    ztc[commander:w]=$ztc[vw]
 
 
-# ┌──────────────────────────────┐
-# │ ░░▒▒▓▓██  DIRECTOR  ██▓▓▒▒░░ │
-# └──────────────────────────────┘
+    # ───── extended properties ─────
 
-function zsh_that_clock {
-    trap 'ztc:core:clean 1' INT
+    ztc[commander:overlay]=1
 
-    stty dsusp undef   # frees ^Y
-    stty discard undef # frees ^O
 
-    zmodload zsh/datetime
+    # ───── custom properties ─────
 
-    typeset -A ztc=()
+    ztc[commander:active]=${ztc[commander:active]:-0}
+    ztc[commander:help]=${ztc[commander:help]:-0}
 
-    ztc:plonk                        # set config + init
-    ztc:core:write $ZTC_INIT         # allocate screen space
-    ztc:core:build && ztc:core:drive # zsh the clock!
-    ztc:core:clean                   # cleanup
+    ztc[commander:prefix]=${ztc[commander:prefix]:-:}
+    ztc[commander:status]=${ztc[commander:status]:-}
+    ztc[commander:input]=${ztc[commander:input]:-}
+
+    ztc[commander:history]=${ztc[commander:history]:-}
+    ztc[commander:history:index]=${ztc[commander:history:index]:-0}
+    ztc[commander:history:filter]=${ztc[commander:history:filter]:-}
+
+    ztc[commander:yank]=${ztc[commander:yank]:-}
+    ztc[commander:cursor]=${ztc[commander:cursor]:-0}
+    ztc[commander:cursor:last]=${ztc[commander:cursor:last]:-0}
+
 }
 
-zsh_that_clock
+
+# ┌─────────────┐
+# │    alter    │
+# └─────────────┘
+
+function ztc:component:commander:alter {
+
+    # ───── import ─────
+
+    local _ztcac_input=$ztc[commander:input]
+    integer _ztcac_cursor=$ztc[commander:cursor]
+
+
+    # ───── truncate overflows ─────
+
+    integer _ztcac_index=$(( ${#_ztcac_input} - _ztcac_cursor ))
+    integer _ztcac_bound=$(( ztc[commander:w] - ${#ztc[commander:prefix]} ))
+
+    if (( ${#_ztcac_input} > _ztcac_bound )); then
+
+        # ╶╶╶╶╶ split input at cursor ╴╴╴╴╴
+
+        local _ztcac_left=${_ztcac_input:0:_ztcac_index}
+        local _ztcac_right=${_ztcac_input:_ztcac_index}
+
+        # ╶╶╶╶╶ determine truncate order + trim to fit ╴╴╴╴╴
+
+        if (( ${#_ztcac_left} > ${#_ztcac_right} )); then
+            if (( ${#_ztcac_right} > _ztcac_bound / 2 )); then _ztcac_right=${_ztcac_right:0:$(( (_ztcac_bound / 2) - 3 ))}...; fi
+            if (( ${#_ztcac_left} + ${#_ztcac_right} > _ztcac_bound )); then _ztcac_left=...${_ztcac_left:$(( -_ztcac_bound + ${#_ztcac_right} + 3 ))}; fi
+        else
+            if (( ${#_ztcac_left} > _ztcac_bound / 2 )); then _ztcac_left=...${_ztcac_left:$(( -(_ztcac_bound / 2) + 3 ))}; fi
+            if (( ${#_ztcac_right} + ${#_ztcac_left} > _ztcac_bound )); then _ztcac_right=${_ztcac_right:0:$(( _ztcac_bound - ${#_ztcac_left} - 3 ))}...; fi
+        fi
+
+        # ╶╶╶╶╶ reassemble + adjust cursor ╴╴╴╴╴
+
+        _ztcac_input="$_ztcac_left$_ztcac_right"
+        _ztcac_cursor=${#_ztcac_right}
+
+    fi
+
+
+    # ───── position cursor ─────
+
+    local _ztcac_position=''
+    if (( _ztcac_cursor > 0 )); then _ztcac_position="$ZTC_CSI${_ztcac_cursor}D"; fi
+
+
+    # ───── export ─────
+
+    local _ztcac_data=()
+
+    if (( ztc[commander:active] )); then _ztcac_data=${ztc[commander:prefix]}${_ztcac_input//@/@@}$_ztcac_position$ZTC_CURSOR_SHOW
+    else _ztcac_data=$ztc[commander:status]$ZTC_CURSOR_HIDE; fi
+
+    ztc:gizmo:stash commander:data _ztcac_data
+
+}

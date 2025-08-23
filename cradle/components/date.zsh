@@ -27,31 +27,29 @@
 # ┃ └────────────────────────────────────────────────────────────────────────────────────────────┘ ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-# ┌───────────────────────────────────┐
-# │ ░░▒▒▓▓██  SOURCE CRADLE  ██▓▓▒▒░░ │
-# └───────────────────────────────────┘
+# ┌────────────────────────────────┐┌────────────┐
+# │ ░░▒▒▓▓██  COMPONENTS  ██▓▓▒▒░░ ││    DATE    │
+# └────────────────────────────────┘└────────────┘
 
-for file in ~/zshclock/cradle/**/*(.); do source $file; done
+# ┌─────────────┐
+# │    order    │
+# └─────────────┘
 
-
-# ┌──────────────────────────────┐
-# │ ░░▒▒▓▓██  DIRECTOR  ██▓▓▒▒░░ │
-# └──────────────────────────────┘
-
-function zsh_that_clock {
-    trap 'ztc:core:clean 1' INT
-
-    stty dsusp undef   # frees ^Y
-    stty discard undef # frees ^O
-
-    zmodload zsh/datetime
-
-    typeset -A ztc=()
-
-    ztc:plonk                        # set config + init
-    ztc:core:write $ZTC_INIT         # allocate screen space
-    ztc:core:build && ztc:core:drive # zsh the clock!
-    ztc:core:clean                   # cleanup
+function ztc:component:date:order {
+    ztc[date:y]=:auto
+    ztc[date:x]=:auto
+    ztc[date:h]=:auto
+    ztc[date:w]=:auto
 }
 
-zsh_that_clock
+
+# ┌─────────────┐
+# │    alter    │
+# └─────────────┘
+
+function ztc:component:date:alter {
+    local _ztcad_date=''
+    strftime -s _ztcad_date ${ztc[:date:format]//\%n/@n} # capture newlines
+
+    ztc:gizmo:stash date:data _ztcad_date
+}

@@ -27,31 +27,69 @@
 # ┃ └────────────────────────────────────────────────────────────────────────────────────────────┘ ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-# ┌───────────────────────────────────┐
-# │ ░░▒▒▓▓██  SOURCE CRADLE  ██▓▓▒▒░░ │
-# └───────────────────────────────────┘
+# ┌─────────────────────────────┐┌────────────┐┌╴╴╴╴╴╴╴╴╴╴╴╴╴╴┐
+# │ ░░▒▒▓▓██  ENGINES  ██▓▓▒▒░░ ││    TEXT    │╎    FLARES    ╎
+# └─────────────────────────────┘└────────────┘└╶╶╶╶╶╶╶╶╶╶╶╶╶╶┘
 
-for file in ~/zshclock/cradle/**/*(.); do source $file; done
+# ┌─────────────┐
+# │    entry    │
+# └─────────────┘
+
+function ztc:engine:text:flare { # expand `@` flares
+
+    # ───── import + setup ─────
+
+    local _ztctf_input=${(Pj:@n:)1//@@/@\(@\)} # escape `@@`
+
+    local _ztctf_flares=()
+    ztc:gizmo:steal flares _ztctf_flares
+
+    # ╶╶╶╶╶ retrieve guide ╴╴╴╴╴
+
+    local -U _ztctf_flat=()
+    local -A _ztctf_guide=()
+    ztc:gizmo:steal flares:guide _ztctf_flat
+
+    for _ztctf_item in $_ztctf_flat; do
+        local -U _ztctf_entry=(${(As:#:)_ztctf_item})
+        _ztctf_guide[$_ztctf_entry[1]]=$_ztctf_entry[2]
+    done
 
 
-# ┌──────────────────────────────┐
-# │ ░░▒▒▓▓██  DIRECTOR  ██▓▓▒▒░░ │
-# └──────────────────────────────┘
+    # ───── delegate flare to correct expander ─────
 
-function zsh_that_clock {
-    trap 'ztc:core:clean 1' INT
+    for _ztctf_flare in $_ztctf_flares; do
 
-    stty dsusp undef   # frees ^Y
-    stty discard undef # frees ^O
+        # ╶╶╶╶╶ skip flaring if out of flares ╴╴╴╴╴
 
-    zmodload zsh/datetime
+        if [[ ! $_ztctf_input =~ @ ]]; then break; fi
 
-    typeset -A ztc=()
+        # ╶╶╶╶╶ link alias ╴╴╴╴╴
 
-    ztc:plonk                        # set config + init
-    ztc:core:write $ZTC_INIT         # allocate screen space
-    ztc:core:build && ztc:core:drive # zsh the clock!
-    ztc:core:clean                   # cleanup
+        local _ztctf_alias=$_ztctf_flare
+        if (( ${${(k)_ztctf_guide}[(Ie)$_ztctf_flare]} )); then _ztctf_alias=$_ztctf_guide[$_ztctf_flare]; fi
+
+        # ╶╶╶╶╶ wrap flare + expand ╴╴╴╴╴
+
+        _ztctf_input=${_ztctf_input//@$_ztctf_flare/@\($_ztctf_flare\)}
+        ztc:engine:text:flare:$_ztctf_alias _ztctf_input $_ztctf_flare
+
+    done
+
+
+    # ───── export ─────
+
+    : ${(AP)2::=${(s:@n:)_ztctf_input}}
+
 }
 
-zsh_that_clock
+
+# ┌──────────────┐
+# │    flares    │
+# └──────────────┘
+
+function ztc:engine:text:flare:newline   { : ${(P)1::=${(P)1//@\($2\)/@n}}                  }
+function ztc:engine:text:flare:reset     { : ${(P)1::=${(P)1//@\($2\)/$ZTC_TEXT_RESET}}     }
+function ztc:engine:text:flare:bold      { : ${(P)1::=${(P)1//@\($2\)/$ZTC_TEXT_BOLD}}      }
+function ztc:engine:text:flare:underline { : ${(P)1::=${(P)1//@\($2\)/$ZTC_TEXT_UNDERLINE}} }
+function ztc:engine:text:flare:invert    { : ${(P)1::=${(P)1//@\($2\)/$ZTC_TEXT_INVERT}}    }

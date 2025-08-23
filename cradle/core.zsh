@@ -27,31 +27,73 @@
 # ┃ └────────────────────────────────────────────────────────────────────────────────────────────┘ ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-# ┌───────────────────────────────────┐
-# │ ░░▒▒▓▓██  SOURCE CRADLE  ██▓▓▒▒░░ │
-# └───────────────────────────────────┘
+# ┌──────────────────────────┐
+# │ ░░▒▒▓▓██  CORE  ██▓▓▒▒░░ │
+# └──────────────────────────┘
 
-for file in ~/zshclock/cradle/**/*(.); do source $file; done
+# ┌─────────────┐
+# │    build    │
+# └─────────────┘
 
+function ztc:core:build { # set view area + build components
+    ztc[vh]=$LINES
+    ztc[vw]=$COLUMNS
 
-# ┌──────────────────────────────┐
-# │ ░░▒▒▓▓██  DIRECTOR  ██▓▓▒▒░░ │
-# └──────────────────────────────┘
+    local _ztcz_components=()
+    ztc:gizmo:steal components _ztcz_components
 
-function zsh_that_clock {
-    trap 'ztc:core:clean 1' INT
+    for _ztcz_name in $_ztcz_components; do "ztc:component:${_ztcz_name}:order"; done
 
-    stty dsusp undef   # frees ^Y
-    stty discard undef # frees ^O
-
-    zmodload zsh/datetime
-
-    typeset -A ztc=()
-
-    ztc:plonk                        # set config + init
-    ztc:core:write $ZTC_INIT         # allocate screen space
-    ztc:core:build && ztc:core:drive # zsh the clock!
-    ztc:core:clean                   # cleanup
+    ztc:cassette:paint:cycle
 }
 
-zsh_that_clock
+
+# ┌─────────────┐
+# │    clean    │
+# └─────────────┘
+
+function ztc:core:clean { # dissolve clock + restore terminal state
+    integer _ztcz_code=${1:-0}
+    ztc:core:write $ZTC_CURSOR_SHOW $ZTC_EXIT
+
+    stty dsusp '^Y'   # restore delayed suspend
+    stty discard '^O' # restore discard
+
+    exit $_ztcz_code
+}
+
+
+# ┌─────────────┐
+# │    drive    │
+# └─────────────┘
+
+function ztc:core:drive { # clock go vroom vroom
+    float _ztcz_epoch=$EPOCHREALTIME
+    integer _ztcz_epsilon=0
+
+    while true; do
+        ztc:engine:text:input # handle inputs
+        ztc:cassette:paint:resize # check for resizes
+
+        # clear stale statuses
+        if [[ -n ztc[commander:status] && ${$(( (EPOCHREALTIME - ztc[commander:status:epoch]) * 1000 ))%%.*} -gt ztc[:rate:status] ]]; then ztc:cassette:commander:clear; fi
+
+        # repaint clock
+        integer _ztcz_duration=${$(( (EPOCHREALTIME - _ztcz_epoch) * 1000 ))%%.*}
+        if (( _ztcz_duration >= ( ztc[:rate:refresh] - _ztcz_epsilon ) )); then
+
+            ztc:cassette:paint:cycle # update component data + repaint
+
+            _ztcz_epoch=$EPOCHREALTIME
+            _ztcz_epsilon=$(( ( _ztcz_duration - (ztc[:rate:refresh] - _ztcz_epsilon) ) % ztc[:rate:refresh] ))
+
+        fi
+    done
+}
+
+
+# ┌─────────────┐
+# │    write    │
+# └─────────────┘
+
+function ztc:core:write { print -n ${(j::)@} } # output to terminal

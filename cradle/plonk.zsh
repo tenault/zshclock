@@ -27,31 +27,104 @@
 # ┃ └────────────────────────────────────────────────────────────────────────────────────────────┘ ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-# ┌───────────────────────────────────┐
-# │ ░░▒▒▓▓██  SOURCE CRADLE  ██▓▓▒▒░░ │
-# └───────────────────────────────────┘
+# ┌───────────────────────────┐
+# │ ░░▒▒▓▓██  PLONK  ██▓▓▒▒░░ │
+# └───────────────────────────┘
 
-for file in ~/zshclock/cradle/**/*(.); do source $file; done
+# ┌─────────────┐
+# │    entry    │
+# └─────────────┘
+
+function ztc:plonk { # set config settings + register parts
+
+    # ───── set defaults ─────
+
+    ztc[:date:format]="%a %b %d %p"
+    ztc[:rate:input]=50
+    ztc[:rate:refresh]=1000
+    ztc[:rate:status]=5000
 
 
-# ┌──────────────────────────────┐
-# │ ░░▒▒▓▓██  DIRECTOR  ██▓▓▒▒░░ │
-# └──────────────────────────────┘
+    # ───── register ─────
 
-function zsh_that_clock {
-    trap 'ztc:core:clean 1' INT
+    ztc:plonk:flares
+    ztc:plonk:commands
+    ztc:plonk:components
 
-    stty dsusp undef   # frees ^Y
-    stty discard undef # frees ^O
-
-    zmodload zsh/datetime
-
-    typeset -A ztc=()
-
-    ztc:plonk                        # set config + init
-    ztc:core:write $ZTC_INIT         # allocate screen space
-    ztc:core:build && ztc:core:drive # zsh the clock!
-    ztc:core:clean                   # cleanup
 }
 
-zsh_that_clock
+
+# ┌────────────────┐
+# │    commands    │
+# └────────────────┘
+
+function ztc:plonk:commands {
+
+    # ───── register commands ─────
+
+    local -U _ztcpl_commands=(date)
+    ztc:gizmo:stash :commands _ztcpl_commands
+
+}
+
+
+# ┌──────────────────┐
+# │    components    │
+# └──────────────────┘
+
+function ztc:plonk:components {
+
+    # ───── register components ─────
+
+    local -U _ztcpl_components=(face:digital date commander)
+    ztc:gizmo:stash components _ztcpl_components
+
+}
+
+
+# ┌──────────────┐
+# │    flares    │
+# └──────────────┘
+
+function ztc:plonk:flares {
+
+    # ───── register flares ─────
+
+    local -U _ztcpl_flares=(newline reset bold underline invert)
+    local -A _ztcpl_guide=()
+
+    # ╶╶╶╶╶ generate short flares ╴╴╴╴╴
+
+    local -A _ztcpl_route=()
+
+    for _ztcpl_i in {1..${#_ztcpl_flares}}; do # loop through all flares
+        local _ztcpl_length=${#_ztcpl_flares[$_ztcpl_i]}
+        _ztcpl_route[$_ztcpl_length]="$_ztcpl_route[$_ztcpl_length]@$_ztcpl_flares[$_ztcpl_i]"
+
+        for _ztcpl_j in {1..$_ztcpl_length}; do # loop through each letter of flare
+            local _ztcpl_abbr=${_ztcpl_flares[$_ztcpl_i]:0:$_ztcpl_j}
+
+            if (( ! _ztcpl_flares[(Ie)$_ztcpl_abbr] )); then # add short flare if not already assigned
+                _ztcpl_flares+=($_ztcpl_abbr)
+                _ztcpl_guide[$_ztcpl_abbr]=$_ztcpl_flares[$_ztcpl_i]
+                _ztcpl_route[$_ztcpl_j]="$_ztcpl_route[$_ztcpl_j]@$_ztcpl_abbr"
+                break
+            fi
+        done
+    done
+
+    # ╶╶╶╶╶ flatten guide ╴╴╴╴╴
+
+    local -U _ztcpl_flat=()
+    for _ztcpl_key _ztcpl_value in ${(kv)_ztcpl_guide}; do _ztcpl_flat+=("$_ztcpl_key#$_ztcpl_value"); done
+
+    ztc:gizmo:stash flares:guide _ztcpl_flat
+
+    # ╶╶╶╶╶ rebuild flare array + sort descending ╴╴╴╴╴
+
+    _ztcpl_flares=()
+    for _ztcpl_key in ${(Ok)_ztcpl_route}; do _ztcpl_flares+=(${(As:@:)_ztcpl_route[$_ztcpl_key]}); done
+
+    ztc:gizmo:stash flares _ztcpl_flares
+
+}

@@ -27,31 +27,31 @@
 # ┃ └────────────────────────────────────────────────────────────────────────────────────────────┘ ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-# ┌───────────────────────────────────┐
-# │ ░░▒▒▓▓██  SOURCE CRADLE  ██▓▓▒▒░░ │
-# └───────────────────────────────────┘
+# ┌───────────────────────────────┐┌─────────────┐
+# │ ░░▒▒▓▓██  CASSETTES  ██▓▓▒▒░░ ││    PAINT    │
+# └───────────────────────────────┘└─────────────┘
 
-for file in ~/zshclock/cradle/**/*(.); do source $file; done
+# ┌─────────────┐
+# │    align    │
+# └─────────────┘
 
+function ztc:cassette:paint:resize { # check for resizes + rebuild
+    LINES=
+    COLUMNS=
 
-# ┌──────────────────────────────┐
-# │ ░░▒▒▓▓██  DIRECTOR  ██▓▓▒▒░░ │
-# └──────────────────────────────┘
-
-function zsh_that_clock {
-    trap 'ztc:core:clean 1' INT
-
-    stty dsusp undef   # frees ^Y
-    stty discard undef # frees ^O
-
-    zmodload zsh/datetime
-
-    typeset -A ztc=()
-
-    ztc:plonk                        # set config + init
-    ztc:core:write $ZTC_INIT         # allocate screen space
-    ztc:core:build && ztc:core:drive # zsh the clock!
-    ztc:core:clean                   # cleanup
+    if (( LINES != ztc[vh] || COLUMNS != ztc[vw] )); then ztc:core:build; fi
 }
 
-zsh_that_clock
+
+# ┌─────────────┐
+# │    cycle    │
+# └─────────────┘
+
+function ztc:cassette:paint:cycle { # update component data + repaint
+    local -U _ztccp_components=$@
+    if (( $# == 0 )); then ztc:gizmo:steal components _ztccp_components; fi
+
+    for _ztccp_name in $_ztccp_components; do ztc:component:${_ztccp_name}:alter; done
+
+    ztc:engine:paint $@
+}

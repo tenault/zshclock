@@ -27,31 +27,60 @@
 # ┃ └────────────────────────────────────────────────────────────────────────────────────────────┘ ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-# ┌───────────────────────────────────┐
-# │ ░░▒▒▓▓██  SOURCE CRADLE  ██▓▓▒▒░░ │
-# └───────────────────────────────────┘
+# ┌───────────────────────────────┐┌────────────┐
+# │ ░░▒▒▓▓██  CASSETTES  ██▓▓▒▒░░ ││    TEXT    │
+# └───────────────────────────────┘└────────────┘
 
-for file in ~/zshclock/cradle/**/*(.); do source $file; done
+# ┌─────────────┐
+# │    shift    │
+# └─────────────┘
 
+function ztc:cassette:text:shift { # transform closest word
+    local _ztcct_input=${(P)1}
+    local _ztcct_index=${(P)2}
 
-# ┌──────────────────────────────┐
-# │ ░░▒▒▓▓██  DIRECTOR  ██▓▓▒▒░░ │
-# └──────────────────────────────┘
+    local _ztcct_left=''
+    local _ztcct_right=''
+    local _ztcct_word_left=''
+    local _ztcct_word_right=''
 
-function zsh_that_clock {
-    trap 'ztc:core:clean 1' INT
+    ztc:gizmo:words _ztcct_input _ztcct_index both _ztcct_left _ztcct_right _ztcct_word_left _ztcct_word_right
+    ztc:gizmo:shift _ztcct_input _ztcct_index $3 _ztcct_left _ztcct_right _ztcct_word_left _ztcct_word_right
 
-    stty dsusp undef   # frees ^Y
-    stty discard undef # frees ^O
-
-    zmodload zsh/datetime
-
-    typeset -A ztc=()
-
-    ztc:plonk                        # set config + init
-    ztc:core:write $ZTC_INIT         # allocate screen space
-    ztc:core:build && ztc:core:drive # zsh the clock!
-    ztc:core:clean                   # cleanup
+    ztc[commander:input]=$_ztcct_input
+    ztc[commander:cursor]=${#_ztcct_right}
 }
 
-zsh_that_clock
+
+# ┌─────────────┐
+# │    yield    │
+# └─────────────┘
+
+function ztc:cassette:text:yield { # submit and process input
+
+    # ───── import + setup ─────
+
+    local _ztcct_input=$1
+    local _ztcct_history_index=$ztc[commander:history:index]
+
+    local -U _ztcct_history=()
+    ztc:gizmo:steal commander:history _ztcct_history
+
+
+    # ───── write to history ─────
+
+    local _ztcct_entry_index=$_ztcct_history[(I)$_ztcct_input]
+    if (( _ztcct_entry_index != 0 )); then _ztcct_history[$_ztcct_entry_index]=(); fi # remove old entry
+    _ztcct_history+=($_ztcct_input) # append new entry
+
+    ztc:gizmo:stash commander:history _ztcct_history
+
+
+    # ───── trim whitespace + parse ─────
+
+    local _ztcct_parse=${(MS)_ztcct_input##[[:graph:]]*[[:graph:]]}
+    if [[ -z $_ztcct_parse ]]; then _ztcct_parse=${(MS)_ztcct_input##[[:graph:]]}; fi
+
+    ztc:engine:text:parse $_ztcct_parse
+
+}
